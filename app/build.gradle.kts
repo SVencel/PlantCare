@@ -62,4 +62,8 @@ dependencies {
 // Firebase
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
+    // Lifecycle + ViewModel for Compose
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+
 }
