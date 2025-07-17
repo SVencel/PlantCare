@@ -1,5 +1,6 @@
 package com.family.plantcare.ui
 
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,11 +19,16 @@ import coil.compose.AsyncImage
 import com.family.plantcare.model.Plant
 import com.family.plantcare.viewmodel.MainViewModel
 import java.text.SimpleDateFormat
+import androidx.compose.material.icons.filled.Menu
+import com.google.firebase.auth.FirebaseAuth
 import java.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
-    mainViewModel: MainViewModel = viewModel()
+    mainViewModel: MainViewModel = viewModel(),
+    onLogout: () -> Unit
+
 ) {
     val plants by mainViewModel.plants.collectAsState()
     val user by mainViewModel.currentUser.collectAsState()
@@ -88,6 +94,14 @@ fun MainScreen(
                                 DropdownMenuItem(
                                     text = { Text("Plant count: ${plants.size}") },
                                     onClick = {}
+                                )
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = { Text("Logout") },
+                                    onClick = {
+                                        FirebaseAuth.getInstance().signOut()
+                                        onLogout()
+                                    }
                                 )
                             }
                         }

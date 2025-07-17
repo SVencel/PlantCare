@@ -12,7 +12,7 @@ android {
 
     defaultConfig {
         applicationId = "com.family.plantcare"
-        minSdk = 21
+        minSdk = 23
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -65,5 +65,7 @@ dependencies {
     // Lifecycle + ViewModel for Compose
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
+
+    implementation(libs.coil.compose)
 
 }

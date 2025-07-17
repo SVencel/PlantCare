@@ -36,7 +36,10 @@ class MainActivity : ComponentActivity() {
                 var isLoggedIn by remember { mutableStateOf(currentUser != null) }
 
                 if (isLoggedIn) {
-                    MainScreen()
+                    MainScreen(
+                        onLogout = { isLoggedIn = false }
+                    )
+
                 } else {
                     LoginScreen(onLoginSuccess = {
                         isLoggedIn = true
