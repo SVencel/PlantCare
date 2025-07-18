@@ -36,12 +36,18 @@ class MainViewModel : ViewModel() {
             }
     }
 
+    fun addPlant(plant: Plant) {
+        val doc = db.collection("plants").document()
+        db.collection("plants").document(doc.id).set(plant.copy(id = doc.id))
+    }
+
+
     fun loadPlants(householdId: String?) {
         _selectedHouseholdId.value = householdId
         val userId = auth.currentUser?.uid ?: return
         val query = db.collection("plants").whereEqualTo(
             if (householdId == null) "ownerId" else "householdId",
-            if (householdId == null) userId else householdId
+            householdId ?: userId
         )
 
         query.addSnapshotListener { snapshot, _ ->

@@ -68,4 +68,7 @@ dependencies {
 
     implementation(libs.coil.compose)
 
+    implementation(libs.okhttp)
+    implementation(libs.androidx.activity.compose.v182)
+
 }

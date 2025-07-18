@@ -37,93 +37,106 @@ fun MainScreen(
     var expanded by remember { mutableStateOf(false) }
     var profileDropdown by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = when {
-                            selectedHouseholdId == null -> "Private Plants"
-                            else -> "Household Plants"
-                        }
-                    )
-                },
-                navigationIcon = {
-                    Box(modifier = Modifier.padding(start = 16.dp)) {
-                        IconButton(onClick = { expanded = true }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu")
-                        }
-                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                            DropdownMenuItem(
-                                text = { Text("Private") },
-                                onClick = {
-                                    mainViewModel.loadPlants(null)
-                                    expanded = false
-                                }
-                            )
-                            user?.households?.forEach { householdId ->
+    var showAddScreen by remember { mutableStateOf(false) }
+
+    if (showAddScreen) {
+        AddPlantScreen(onPlantAdded = {
+            showAddScreen = false
+        })
+    } else {
+
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = when {
+                                selectedHouseholdId == null -> "Your Plants"
+                                else -> "Household Plants"
+                            }
+                        )
+                    },
+                    navigationIcon = {
+                        Box(modifier = Modifier.padding(start = 16.dp)) {
+                            IconButton(onClick = { expanded = true }) {
+                                Icon(Icons.Default.Menu, contentDescription = "Menu")
+                            }
+                            DropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false }) {
                                 DropdownMenuItem(
-                                    text = { Text("Household: $householdId") },
+                                    text = { Text("Private") },
                                     onClick = {
-                                        mainViewModel.loadPlants(householdId)
+                                        mainViewModel.loadPlants(null)
+                                        expanded = false
+                                    }
+                                )
+                                user?.households?.forEach { householdId ->
+                                    DropdownMenuItem(
+                                        text = { Text("Household: $householdId") },
+                                        onClick = {
+                                            mainViewModel.loadPlants(householdId)
+                                            expanded = false
+                                        }
+                                    )
+                                }
+                                DropdownMenuItem(
+                                    text = { Text("Create/Join Household") },
+                                    onClick = {
+                                        // TODO: Navigate to household creation screen
                                         expanded = false
                                     }
                                 )
                             }
-                            DropdownMenuItem(
-                                text = { Text("Create/Join Household") },
-                                onClick = {
-                                    // TODO: Navigate to household creation screen
-                                    expanded = false
+                        }
+                    },
+                    actions = {
+                        Box(modifier = Modifier.padding(end = 16.dp)) {
+                            IconButton(onClick = { profileDropdown = true }) {
+                                Icon(Icons.Default.AccountCircle, contentDescription = "Profile")
+                            }
+                            DropdownMenu(
+                                expanded = profileDropdown,
+                                onDismissRequest = { profileDropdown = false }) {
+                                user?.let {
+                                    DropdownMenuItem(
+                                        text = { Text("Member since: ${formatDate(it.joinDate)}") },
+                                        onClick = {}
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Plant count: ${plants.size}") },
+                                        onClick = {}
+                                    )
+                                    HorizontalDivider()
+                                    DropdownMenuItem(
+                                        text = { Text("Logout") },
+                                        onClick = {
+                                            FirebaseAuth.getInstance().signOut()
+                                            onLogout()
+                                        }
+                                    )
                                 }
-                            )
-                        }
-                    }
-                },
-                actions = {
-                    Box(modifier = Modifier.padding(end = 16.dp)) {
-                        IconButton(onClick = { profileDropdown = true }) {
-                            Icon(Icons.Default.AccountCircle, contentDescription = "Profile")
-                        }
-                        DropdownMenu(expanded = profileDropdown, onDismissRequest = { profileDropdown = false }) {
-                            user?.let {
-                                DropdownMenuItem(
-                                    text = { Text("Member since: ${formatDate(it.joinDate)}") },
-                                    onClick = {}
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Plant count: ${plants.size}") },
-                                    onClick = {}
-                                )
-                                HorizontalDivider()
-                                DropdownMenuItem(
-                                    text = { Text("Logout") },
-                                    onClick = {
-                                        FirebaseAuth.getInstance().signOut()
-                                        onLogout()
-                                    }
-                                )
                             }
                         }
                     }
+                )
+            },
+
+            floatingActionButton = {
+                FloatingActionButton(onClick = { showAddScreen = true }) {
+
+                    Icon(Icons.Default.Add, contentDescription = "Add Plant")
                 }
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = {
-                // TODO: Navigate to add plant screen
-            }) {
-                Icon(Icons.Default.Add, contentDescription = "Add Plant")
             }
-        }
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-        ) {
-            items(plants.size) { index ->
-                PlantCard(plant = plants[index])
+        ) { padding ->
+            LazyColumn(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+            ) {
+                items(plants.size) { index ->
+                    PlantCard(plant = plants[index])
+                }
             }
         }
     }
