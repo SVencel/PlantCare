@@ -1,6 +1,7 @@
 package com.family.plantcare.viewmodel
 
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.json.JSONArray
+import java.io.File
 
 class MainViewModel : ViewModel() {
 
@@ -73,6 +75,23 @@ class MainViewModel : ViewModel() {
     fun addPlant(plant: Plant) {
         val doc = db.collection("plants").document()
         db.collection("plants").document(doc.id).set(plant.copy(id = doc.id))
+    }
+
+    fun copyImageToInternalStorage(context: Context, uri: Uri): String {
+        return try {
+            val inputStream = context.contentResolver.openInputStream(uri)
+                ?: return ""
+            val fileName = "plant_${System.currentTimeMillis()}.jpg"
+            val file = File(context.filesDir, fileName)
+            inputStream.use { input ->
+                file.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+            file.absolutePath
+        } catch (e: Exception) {
+            ""
+        }
     }
 
 

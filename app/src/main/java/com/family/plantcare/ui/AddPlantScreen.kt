@@ -6,6 +6,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,7 +17,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.family.plantcare.model.Plant
-import com.family.plantcare.model.PlantCareInfo
 import com.family.plantcare.viewmodel.MainViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -23,7 +24,6 @@ import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
-import java.util.*
 
 @Composable
 fun AddPlantScreen(
@@ -40,11 +40,16 @@ fun AddPlantScreen(
 
     var nickname by remember { mutableStateOf("") }
     var selectedHousehold by remember { mutableStateOf<String?>(null) }
-    var wateringDays by remember { mutableStateOf("7") }
+    var wateringDays by remember { mutableStateOf("99") }
     var localError by remember { mutableStateOf<String?>(null) }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
     var sunlightAdvice by remember { mutableStateOf<String?>(null) }
 
+    var isIdentifying by remember { mutableStateOf(false) }
+
+    LaunchedEffect(true) {
+        viewModel.loadPlantCareInfo(context)
+    }
 
     val householdOptions = listOf(null) + (user?.households ?: emptyList())
 
@@ -71,7 +76,7 @@ fun AddPlantScreen(
             ownerId = if (selectedHousehold == null) userId else null,
             householdId = selectedHousehold,
             nextWateringDate = System.currentTimeMillis() + days * 24 * 60 * 60 * 1000,
-            imageUrl = imageUri.toString(),
+            imageUrl = viewModel.copyImageToInternalStorage(context, imageUri!!),
             commonName = commonName,
             confidence = confidencePercent?.toDouble(),
             gbifUrl = gbifUrl
@@ -80,36 +85,6 @@ fun AddPlantScreen(
         viewModel.addPlant(plant)
         Toast.makeText(context, "Plant added!", Toast.LENGTH_SHORT).show()
         onPlantAdded()
-    }
-
-    suspend fun fetchPlantCareFromOpenFarm(name: String): PlantCareInfo? {
-        return try {
-            val client = OkHttpClient()
-            val url = "https://openfarm.cc/api/v1/crops?filter=${name.lowercase()}"
-            val request = Request.Builder().url(url).get().build()
-            val response = withContext(Dispatchers.IO) { client.newCall(request).execute() }
-
-            response.body?.let { body ->
-                val json = JSONObject(body.string())
-                val data = json.getJSONArray("data")
-                if (data.length() > 0) {
-                    val attrs = data.getJSONObject(0).getJSONObject("attributes")
-                    PlantCareInfo(
-                        name = name,
-                        commonName = attrs.getString("name"),
-                        wateringDays = when (attrs.optString("watering", "Normal")) {
-                            "Low" -> 14
-                            "Moderate", "Normal" -> 7
-                            "High" -> 3
-                            else -> 7
-                        },
-                        sunlight = attrs.optString("sun_requirements", "Unknown")
-                    )
-                } else null
-            }
-        } catch (e: Exception) {
-            null
-        }
     }
 
     suspend fun identifyPlant(uri: Uri) {
@@ -149,6 +124,20 @@ fun AddPlantScreen(
                         if (commonNamesArray.length() > 0) commonNamesArray.getString(0) else null
                     confidencePercent = (first.getDouble("score") * 100).toInt()
 
+
+                    val cleanName = scientificName.trim().lowercase()
+                    val cleanCommon = (commonName ?: "").trim().lowercase()
+                    val careInfo = viewModel.careInfoList.firstOrNull {
+                        it.name.trim().lowercase() == cleanName ||
+                                it.commonName.trim().lowercase() == cleanCommon
+                    }
+
+
+                    careInfo?.let {
+                        wateringDays = it.wateringDays.toString()
+                        sunlightAdvice = it.sunlight
+                    }
+
                 } else {
                     localError = "Plant not recognized. Try another image."
                 }
@@ -156,24 +145,10 @@ fun AddPlantScreen(
                 localError = "PlantNet did not return any data."
             }
 
-
-            val careInfo = fetchPlantCareFromOpenFarm(scientificName)
-                ?: viewModel.careInfoList.firstOrNull {
-                    it.name.equals(scientificName, true) ||
-                            it.commonName.equals(commonName ?: "", true)
-                }
-
-            careInfo?.let {
-                wateringDays = it.wateringDays.toString()
-                sunlightAdvice = it.sunlight
-            }
-
-
         } catch (e: Exception) {
             localError = "Failed to identify plant: ${e.message}"
         }
     }
-
 
     Scaffold { padding ->
         Box(
@@ -185,7 +160,11 @@ fun AddPlantScreen(
         ) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 100.dp)
+
             ) {
                 Text("Add a Plant", style = MaterialTheme.typography.headlineSmall)
 
@@ -203,7 +182,9 @@ fun AddPlantScreen(
                     )
 
                     LaunchedEffect(it) {
+                        isIdentifying = true
                         identifyPlant(it)
+                        isIdentifying = false
                     }
 
                     confidencePercent?.let { percent ->
@@ -213,10 +194,41 @@ fun AddPlantScreen(
                     commonName?.let {
                         Text("Common name: $it", style = MaterialTheme.typography.bodySmall)
                     }
-                    sunlightAdvice?.let {
-                        Text("☀️ Suggested sunlight: $it", style = MaterialTheme.typography.bodySmall)
+
+                    if (isIdentifying) {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
                     }
 
+                    if (!isIdentifying && (sunlightAdvice != null || wateringDays != "99")) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        ) {
+                            Column(Modifier.padding(16.dp)) {
+                                sunlightAdvice?.let {
+                                    Text("☀️ Suggested Sunlight", style = MaterialTheme.typography.labelMedium)
+                                    Text(it, style = MaterialTheme.typography.bodyMedium)
+                                }
+
+                                if (wateringDays != "7") {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text("💧 Suggested Watering", style = MaterialTheme.typography.labelMedium)
+                                    Text("Every $wateringDays day(s)", style = MaterialTheme.typography.bodyMedium)
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    "✅ These values were auto-filled based on plant data.",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
                 }
 
                 OutlinedTextField(

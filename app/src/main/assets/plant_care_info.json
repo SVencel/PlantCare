@@ -1,26 +1,638 @@
 [
   {
+    "name": "Epipremnum aureum",
+    "commonName": "Pothos",
+    "wateringDays": 14,
+    "sunlight": "Bright Light"
+  },
+  {
+    "name": "Monstera deliciosa",
+    "commonName": "Monstera",
+    "wateringDays": 7,
+    "sunlight": "Medium Light"
+  },
+  {
     "name": "Sansevieria trifasciata",
     "commonName": "Snake Plant",
-    "wateringDays": 14,
-    "sunlight": "Low to Bright Indirect Light"
-  },
-  {
-    "name": "Ficus lyrata",
-    "commonName": "Fiddle Leaf Fig",
-    "wateringDays": 7,
+    "wateringDays": 21,
     "sunlight": "Bright Indirect Light"
-  },
-  {
-    "name": "Aloe vera",
-    "commonName": "Aloe Vera",
-    "wateringDays": 10,
-    "sunlight": "Full Sun"
   },
   {
     "name": "Chlorophytum comosum",
     "commonName": "Spider Plant",
+    "wateringDays": 3,
+    "sunlight": "Bright Light"
+  },
+  {
+    "name": "Spathiphyllum wallisii",
+    "commonName": "Peace Lily",
+    "wateringDays": 7,
+    "sunlight": "Bright Indirect Light"
+  },
+  {
+    "name": "Ficus lyrata",
+    "commonName": "Fiddle Leaf Fig",
+    "wateringDays": 21,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Crassula ovata",
+    "commonName": "Jade Plant",
+    "wateringDays": 7,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Aloe vera",
+    "commonName": "Aloe Vera",
+    "wateringDays": 14,
+    "sunlight": "Full Sun"
+  },
+  {
+    "name": "Philodendron hederaceum",
+    "commonName": "Heartleaf Philodendron",
+    "wateringDays": 7,
+    "sunlight": "Bright Light"
+  },
+  {
+    "name": "Aglaonema modestum",
+    "commonName": "Chinese Evergreen",
     "wateringDays": 5,
-    "sunlight": "Indirect Light"
+    "sunlight": "Bright Indirect Light"
+  },
+  {
+    "name": "Zamioculcas zamiifolia",
+    "commonName": "ZZ Plant",
+    "wateringDays": 5,
+    "sunlight": "Medium Light"
+  },
+  {
+    "name": "Dracaena fragrans",
+    "commonName": "Corn Plant",
+    "wateringDays": 7,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Maranta leuconeura",
+    "commonName": "Prayer Plant",
+    "wateringDays": 10,
+    "sunlight": "Bright Indirect Light"
+  },
+  {
+    "name": "Pilea peperomioides",
+    "commonName": "Chinese Money Plant",
+    "wateringDays": 10,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Hoya carnosa",
+    "commonName": "Hoya (Wax Plant)",
+    "wateringDays": 21,
+    "sunlight": "Full Sun"
+  },
+  {
+    "name": "Dieffenbachia seguine",
+    "commonName": "Dumb Cane",
+    "wateringDays": 5,
+    "sunlight": "Low Light"
+  },
+  {
+    "name": "Calathea orbifolia",
+    "commonName": "Calathea",
+    "wateringDays": 10,
+    "sunlight": "Medium Light"
+  },
+  {
+    "name": "Tradescantia zebrina",
+    "commonName": "Wandering Jew",
+    "wateringDays": 10,
+    "sunlight": "Bright Indirect Light"
+  },
+  {
+    "name": "Schefflera arboricola",
+    "commonName": "Umbrella Plant",
+    "wateringDays": 21,
+    "sunlight": "Low Light"
+  },
+  {
+    "name": "Nephrolepis exaltata",
+    "commonName": "Boston Fern",
+    "wateringDays": 21,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Beaucarnea recurvata",
+    "commonName": "Ponytail Palm",
+    "wateringDays": 5,
+    "sunlight": "Bright Light"
+  },
+  {
+    "name": "Anthurium andraeanum",
+    "commonName": "Anthurium",
+    "wateringDays": 10,
+    "sunlight": "Medium Light"
+  },
+  {
+    "name": "Codiaeum variegatum",
+    "commonName": "Croton",
+    "wateringDays": 10,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Peperomia obtusifolia",
+    "commonName": "Baby Rubber Plant",
+    "wateringDays": 5,
+    "sunlight": "Medium Light"
+  },
+  {
+    "name": "Ficus elastica",
+    "commonName": "Rubber Plant",
+    "wateringDays": 3,
+    "sunlight": "Medium Light"
+  },
+  {
+    "name": "Strelitzia reginae",
+    "commonName": "Bird of Paradise",
+    "wateringDays": 7,
+    "sunlight": "Full Sun"
+  },
+  {
+    "name": "Asplenium nidus",
+    "commonName": "Bird\u2019s Nest Fern",
+    "wateringDays": 7,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Begonia rex",
+    "commonName": "Rex Begonia",
+    "wateringDays": 14,
+    "sunlight": "Bright Light"
+  },
+  {
+    "name": "Soleirolia soleirolii",
+    "commonName": "Baby\u2019s Tears",
+    "wateringDays": 7,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Senecio rowleyanus",
+    "commonName": "String of Pearls",
+    "wateringDays": 3,
+    "sunlight": "Bright Light"
+  },
+  {
+    "name": "Echeveria elegans",
+    "commonName": "Echeveria",
+    "wateringDays": 3,
+    "sunlight": "Low Light"
+  },
+  {
+    "name": "Kalanchoe blossfeldiana",
+    "commonName": "Kalanchoe",
+    "wateringDays": 10,
+    "sunlight": "Medium Light"
+  },
+  {
+    "name": "Haworthia fasciata",
+    "commonName": "Zebra Plant",
+    "wateringDays": 5,
+    "sunlight": "Low Light"
+  },
+  {
+    "name": "Oxalis triangularis",
+    "commonName": "Purple Shamrock",
+    "wateringDays": 21,
+    "sunlight": "Low Light"
+  },
+  {
+    "name": "Clivia miniata",
+    "commonName": "Clivia",
+    "wateringDays": 7,
+    "sunlight": "Bright Indirect Light"
+  },
+  {
+    "name": "Selenicereus grandiflorus",
+    "commonName": "Queen of the Night",
+    "wateringDays": 10,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Gynura aurantiaca",
+    "commonName": "Purple Passion Plant",
+    "wateringDays": 3,
+    "sunlight": "Low Light"
+  },
+  {
+    "name": "Cyperus alternifolius",
+    "commonName": "Umbrella Sedge",
+    "wateringDays": 7,
+    "sunlight": "Bright Indirect Light"
+  },
+  {
+    "name": "Camellia japonica",
+    "commonName": "Camellia",
+    "wateringDays": 5,
+    "sunlight": "Bright Light"
+  },
+  {
+    "name": "Nerium oleander",
+    "commonName": "Oleander",
+    "wateringDays": 10,
+    "sunlight": "Medium Light"
+  },
+  {
+    "name": "Sedum morganianum",
+    "commonName": "Burro\u2019s Tail",
+    "wateringDays": 21,
+    "sunlight": "Full Sun"
+  },
+  {
+    "name": "Portulacaria afra",
+    "commonName": "Elephant Bush",
+    "wateringDays": 5,
+    "sunlight": "Bright Light"
+  },
+  {
+    "name": "Plectranthus verticillatus",
+    "commonName": "Swedish Ivy",
+    "wateringDays": 21,
+    "sunlight": "Bright Indirect Light"
+  },
+  {
+    "name": "Dionaea muscipula",
+    "commonName": "Venus Flytrap",
+    "wateringDays": 5,
+    "sunlight": "Medium Light"
+  },
+  {
+    "name": "Drosera capensis",
+    "commonName": "Cape Sundew",
+    "wateringDays": 3,
+    "sunlight": "Low Light"
+  },
+  {
+    "name": "Tillandsia ionantha",
+    "commonName": "Air Plant",
+    "wateringDays": 7,
+    "sunlight": "Medium Light"
+  },
+  {
+    "name": "Fittonia albivenis",
+    "commonName": "Nerve Plant",
+    "wateringDays": 7,
+    "sunlight": "Bright Light"
+  },
+  {
+    "name": "Selaginella kraussiana",
+    "commonName": "Club Moss",
+    "wateringDays": 5,
+    "sunlight": "Medium Light"
+  },
+  {
+    "name": "Capsicum annuum",
+    "commonName": "Ornamental Pepper",
+    "wateringDays": 14,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Rhipsalis baccifera",
+    "commonName": "Mistletoe Cactus",
+    "wateringDays": 10,
+    "sunlight": "Low Light"
+  },
+  {
+    "name": "Ctenanthe burle-marxii",
+    "commonName": "Never Never Plant",
+    "wateringDays": 5,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Aeschynanthus radicans",
+    "commonName": "Lipstick Plant",
+    "wateringDays": 7,
+    "sunlight": "Bright Light"
+  },
+  {
+    "name": "Columnea gloriosa",
+    "commonName": "Goldfish Plant",
+    "wateringDays": 14,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Streptocarpus hybrid",
+    "commonName": "Cape Primrose",
+    "wateringDays": 5,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Helxine soleirolii",
+    "commonName": "Mind-Your-Own-Business",
+    "wateringDays": 14,
+    "sunlight": "Bright Indirect Light"
+  },
+  {
+    "name": "Impatiens walleriana",
+    "commonName": "Busy Lizzie",
+    "wateringDays": 10,
+    "sunlight": "Bright Light"
+  },
+  {
+    "name": "Nidularium innocentii",
+    "commonName": "Bromeliad",
+    "wateringDays": 21,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Fatsia japonica",
+    "commonName": "Japanese Aralia",
+    "wateringDays": 3,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Sinningia speciosa",
+    "commonName": "Florist\u2019s Gloxinia",
+    "wateringDays": 7,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Musa acuminata",
+    "commonName": "Dwarf Banana",
+    "wateringDays": 10,
+    "sunlight": "Full Sun"
+  },
+  {
+    "name": "Cordyline fruticosa",
+    "commonName": "Ti Plant",
+    "wateringDays": 14,
+    "sunlight": "Medium Light"
+  },
+  {
+    "name": "Pandanus veitchii",
+    "commonName": "Screw Pine",
+    "wateringDays": 10,
+    "sunlight": "Full Sun"
+  },
+  {
+    "name": "Piper nigrum",
+    "commonName": "Black Pepper Vine",
+    "wateringDays": 14,
+    "sunlight": "Bright Indirect Light"
+  },
+  {
+    "name": "Rosa chinensis",
+    "commonName": "Miniature Rose",
+    "wateringDays": 14,
+    "sunlight": "Bright Light"
+  },
+  {
+    "name": "Solanum pseudocapsicum",
+    "commonName": "Jerusalem Cherry",
+    "wateringDays": 21,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Caladium bicolor",
+    "commonName": "Caladium",
+    "wateringDays": 10,
+    "sunlight": "Medium Light"
+  },
+  {
+    "name": "Colocasia esculenta",
+    "commonName": "Elephant Ear",
+    "wateringDays": 7,
+    "sunlight": "Bright Indirect Light"
+  },
+  {
+    "name": "Cercis canadensis",
+    "commonName": "Redbud (bonsai)",
+    "wateringDays": 14,
+    "sunlight": "Full Sun"
+  },
+  {
+    "name": "Mimosa pudica",
+    "commonName": "Sensitive Plant",
+    "wateringDays": 10,
+    "sunlight": "Low Light"
+  },
+  {
+    "name": "Thunbergia alata",
+    "commonName": "Black-Eyed Susan Vine",
+    "wateringDays": 3,
+    "sunlight": "Bright Light"
+  },
+  {
+    "name": "Medinilla magnifica",
+    "commonName": "Malaysian Orchid",
+    "wateringDays": 7,
+    "sunlight": "Low Light"
+  },
+  {
+    "name": "Gardenia jasminoides",
+    "commonName": "Gardenia",
+    "wateringDays": 7,
+    "sunlight": "Medium Light"
+  },
+  {
+    "name": "Justicia brandegeeana",
+    "commonName": "Shrimp Plant",
+    "wateringDays": 10,
+    "sunlight": "Bright Light"
+  },
+  {
+    "name": "Episcia cupreata",
+    "commonName": "Flame Violet",
+    "wateringDays": 3,
+    "sunlight": "Bright Indirect Light"
+  },
+  {
+    "name": "Brugmansia suaveolens",
+    "commonName": "Angel\u2019s Trumpet",
+    "wateringDays": 14,
+    "sunlight": "Low Light"
+  },
+  {
+    "name": "Camassia leichtlinii",
+    "commonName": "Camas Lily",
+    "wateringDays": 7,
+    "sunlight": "Bright Light"
+  },
+  {
+    "name": "Chamaedorea elegans",
+    "commonName": "Parlor Palm",
+    "wateringDays": 7,
+    "sunlight": "Bright Indirect Light"
+  },
+  {
+    "name": "Phoenix roebelenii",
+    "commonName": "Pygmy Date Palm",
+    "wateringDays": 3,
+    "sunlight": "Low Light"
+  },
+  {
+    "name": "Dypsis lutescens",
+    "commonName": "Areca Palm",
+    "wateringDays": 3,
+    "sunlight": "Low Light"
+  },
+  {
+    "name": "Howea forsteriana",
+    "commonName": "Kentia Palm",
+    "wateringDays": 10,
+    "sunlight": "Bright Light"
+  },
+  {
+    "name": "Liriope muscari",
+    "commonName": "Lilyturf",
+    "wateringDays": 21,
+    "sunlight": "Bright Light"
+  },
+  {
+    "name": "Aspidistra elatior",
+    "commonName": "Cast Iron Plant",
+    "wateringDays": 21,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Bambusa vulgaris",
+    "commonName": "Bamboo",
+    "wateringDays": 3,
+    "sunlight": "Low Light"
+  },
+  {
+    "name": "Aechmea fasciata",
+    "commonName": "Urn Plant",
+    "wateringDays": 10,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Myrtus communis",
+    "commonName": "Myrtle",
+    "wateringDays": 14,
+    "sunlight": "Bright Indirect Light"
+  },
+  {
+    "name": "Lavandula angustifolia",
+    "commonName": "English Lavender",
+    "wateringDays": 5,
+    "sunlight": "Full Sun"
+  },
+  {
+    "name": "Mentha spicata",
+    "commonName": "Spearmint",
+    "wateringDays": 14,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Ocimum basilicum",
+    "commonName": "Basil",
+    "wateringDays": 7,
+    "sunlight": "Bright Indirect Light"
+  },
+  {
+    "name": "Rosmarinus officinalis",
+    "commonName": "Rosemary",
+    "wateringDays": 7,
+    "sunlight": "Full Sun"
+  },
+  {
+    "name": "Salvia officinalis",
+    "commonName": "Sage",
+    "wateringDays": 3,
+    "sunlight": "Full Sun"
+  },
+  {
+    "name": "Thymus vulgaris",
+    "commonName": "Thyme",
+    "wateringDays": 7,
+    "sunlight": "Full Sun"
+  },
+  {
+    "name": "Citrus limon",
+    "commonName": "Lemon Tree",
+    "wateringDays": 3,
+    "sunlight": "Bright Light"
+  },
+  {
+    "name": "Citrus sinensis",
+    "commonName": "Orange Tree",
+    "wateringDays": 3,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Coffea arabica",
+    "commonName": "Coffee Plant",
+    "wateringDays": 10,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Capsicum chinense",
+    "commonName": "Ornamental Chili",
+    "wateringDays": 3,
+    "sunlight": "Low Light"
+  },
+  {
+    "name": "Vitis vinifera",
+    "commonName": "Grape Vine",
+    "wateringDays": 10,
+    "sunlight": "Full Sun"
+  },
+  {
+    "name": "Passiflora edulis",
+    "commonName": "Passionflower",
+    "wateringDays": 14,
+    "sunlight": "Medium Light"
+  },
+  {
+    "name": "Bougainvillea glabra",
+    "commonName": "Bougainvillea",
+    "wateringDays": 21,
+    "sunlight": "Medium Light"
+  },
+  {
+    "name": "Pelargonium graveolens",
+    "commonName": "Scented Geranium",
+    "wateringDays": 14,
+    "sunlight": "Full Sun"
+  },
+  {
+    "name": "Lantana camara",
+    "commonName": "Lantana",
+    "wateringDays": 3,
+    "sunlight": "Bright Light"
+  },
+  {
+    "name": "Oxalis articulata",
+    "commonName": "Wood Sorrel",
+    "wateringDays": 7,
+    "sunlight": "Bright Indirect Light"
+  },
+  {
+    "name": "Begonia semperflorens",
+    "commonName": "Wax Begonia",
+    "wateringDays": 14,
+    "sunlight": "Low Light"
+  },
+  {
+    "name": "Impatiens hawkeri",
+    "commonName": "New Guinea Impatiens",
+    "wateringDays": 3,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Zantedeschia aethiopica",
+    "commonName": "Calla Lily",
+    "wateringDays": 7,
+    "sunlight": "Full Sun"
+  },
+  {
+    "name": "Hyacinthus orientalis",
+    "commonName": "Hyacinth",
+    "wateringDays": 5,
+    "sunlight": "Bright Indirect Light"
+  },
+  {
+    "name": "Amaryllis belladonna",
+    "commonName": "Amaryllis",
+    "wateringDays": 21,
+    "sunlight": "Bright Light"
   }
 ]
