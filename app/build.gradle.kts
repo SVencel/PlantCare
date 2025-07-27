@@ -71,4 +71,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.androidx.activity.compose.v182)
 
+    implementation(libs.androidx.material)
+
+
 }

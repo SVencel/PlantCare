@@ -111,4 +111,24 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    fun deletePlant(plant: Plant) {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+
+        val collectionRef = if (plant.householdId != null) {
+            db.collection("households").document(plant.householdId).collection("plants")
+        } else {
+            db.collection("users").document(userId).collection("plants")
+        }
+
+        collectionRef.document(plant.id).delete()
+            .addOnSuccessListener {
+                _plants.value = _plants.value.filterNot { it.id == plant.id }
+                Log.d("DeletePlant", "Successfully deleted plant: ${plant.name}")
+            }
+            .addOnFailureListener {
+                Log.e("DeletePlant", "Failed to delete plant: ${it.message}")
+            }
+    }
+
+
 }

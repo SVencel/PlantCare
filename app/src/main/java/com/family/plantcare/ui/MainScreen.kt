@@ -21,7 +21,6 @@ import com.family.plantcare.viewmodel.MainViewModel
 import java.text.SimpleDateFormat
 import androidx.compose.material.icons.filled.Menu
 import com.google.firebase.auth.FirebaseAuth
-import java.io.File
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -152,7 +151,7 @@ fun PlantCard(plant: Plant) {
     ) {
         Row(modifier = Modifier.padding(16.dp)) {
             AsyncImage(
-                model = plant.imageUrl?.let { File(it) },
+                model = plant.imageUrl ?: "",
                 contentDescription = plant.name,
                 modifier = Modifier.size(64.dp)
             )
