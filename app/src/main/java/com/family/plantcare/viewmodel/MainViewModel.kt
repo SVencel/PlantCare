@@ -1,12 +1,20 @@
 package com.family.plantcare.viewmodel
 
+import android.content.Context
+import android.util.Log
+import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.family.plantcare.model.Plant
+import com.family.plantcare.model.PlantCareInfo
 import com.family.plantcare.model.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import org.json.JSONArray
 
 class MainViewModel : ViewModel() {
 
@@ -36,6 +44,32 @@ class MainViewModel : ViewModel() {
             }
     }
 
+    private val _careInfoList = mutableStateListOf<PlantCareInfo>()
+    val careInfoList: List<PlantCareInfo> get() = _careInfoList
+
+    fun loadPlantCareInfo(context: Context) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val json = context.assets.open("plant_care_info.json").bufferedReader().use { it.readText() }
+                val list = JSONArray(json)
+                for (i in 0 until list.length()) {
+                    val obj = list.getJSONObject(i)
+                    _careInfoList.add(
+                        PlantCareInfo(
+                            name = obj.getString("name"),
+                            commonName = obj.getString("commonName"),
+                            wateringDays = obj.getInt("wateringDays"),
+                            sunlight = obj.getString("sunlight")
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("PlantCare", "Failed to load fallback data", e)
+            }
+        }
+    }
+
+
     fun addPlant(plant: Plant) {
         val doc = db.collection("plants").document()
         db.collection("plants").document(doc.id).set(plant.copy(id = doc.id))
@@ -57,4 +91,5 @@ class MainViewModel : ViewModel() {
             }
         }
     }
+
 }

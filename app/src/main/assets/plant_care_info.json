@@ -1,0 +1,26 @@
+[
+  {
+    "name": "Sansevieria trifasciata",
+    "commonName": "Snake Plant",
+    "wateringDays": 14,
+    "sunlight": "Low to Bright Indirect Light"
+  },
+  {
+    "name": "Ficus lyrata",
+    "commonName": "Fiddle Leaf Fig",
+    "wateringDays": 7,
+    "sunlight": "Bright Indirect Light"
+  },
+  {
+    "name": "Aloe vera",
+    "commonName": "Aloe Vera",
+    "wateringDays": 10,
+    "sunlight": "Full Sun"
+  },
+  {
+    "name": "Chlorophytum comosum",
+    "commonName": "Spider Plant",
+    "wateringDays": 5,
+    "sunlight": "Indirect Light"
+  }
+]

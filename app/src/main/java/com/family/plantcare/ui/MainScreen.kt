@@ -157,7 +157,14 @@ fun PlantCard(plant: Plant) {
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text(text = plant.name, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = plant.name, // user-given name or scientific
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                if (!plant.commonName.isNullOrBlank()) {
+                    Text(text = "Common: ${plant.commonName}")
+                }
                 Text(text = "Water in ${daysUntil(plant.nextWateringDate)} days")
             }
         }

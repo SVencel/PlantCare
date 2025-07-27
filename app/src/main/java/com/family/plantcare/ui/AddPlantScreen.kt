@@ -1,6 +1,5 @@
 package com.family.plantcare.ui
 
-import android.app.Activity
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -11,22 +10,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toFile
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.family.plantcare.model.Plant
+import com.family.plantcare.model.PlantCareInfo
 import com.family.plantcare.viewmodel.MainViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
-import java.io.File
 import java.util.*
 
 @Composable
@@ -37,25 +33,29 @@ fun AddPlantScreen(
     val user by viewModel.currentUser.collectAsState()
     val context = LocalContext.current
 
-    var plantName by remember { mutableStateOf("") }
+    var scientificName by remember { mutableStateOf("") }
+    var commonName by remember { mutableStateOf<String?>(null) }
+    var confidencePercent by remember { mutableStateOf<Int?>(null) }
+    var gbifUrl by remember { mutableStateOf<String?>(null) }
+
+    var nickname by remember { mutableStateOf("") }
     var selectedHousehold by remember { mutableStateOf<String?>(null) }
     var wateringDays by remember { mutableStateOf("7") }
     var localError by remember { mutableStateOf<String?>(null) }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
+    var sunlightAdvice by remember { mutableStateOf<String?>(null) }
+
+
     val householdOptions = listOf(null) + (user?.households ?: emptyList())
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        uri?.let {
-            imageUri = it
-        }
-    }
+    ) { uri -> imageUri = uri }
 
     fun savePlant() {
         localError = null
-        if (plantName.trim().isEmpty()) {
-            localError = "Plant name is required."
+        if (scientificName.trim().isEmpty() && nickname.trim().isEmpty()) {
+            localError = "Please name your plant or identify it first."
             return
         }
 
@@ -67,16 +67,49 @@ fun AddPlantScreen(
 
         val userId = user?.id ?: return
         val plant = Plant(
-            name = plantName.trim(),
+            name = nickname.ifBlank { scientificName.trim() },
             ownerId = if (selectedHousehold == null) userId else null,
             householdId = selectedHousehold,
             nextWateringDate = System.currentTimeMillis() + days * 24 * 60 * 60 * 1000,
-            imageUrl = imageUri.toString()
+            imageUrl = imageUri.toString(),
+            commonName = commonName,
+            confidence = confidencePercent?.toDouble(),
+            gbifUrl = gbifUrl
         )
 
         viewModel.addPlant(plant)
         Toast.makeText(context, "Plant added!", Toast.LENGTH_SHORT).show()
         onPlantAdded()
+    }
+
+    suspend fun fetchPlantCareFromOpenFarm(name: String): PlantCareInfo? {
+        return try {
+            val client = OkHttpClient()
+            val url = "https://openfarm.cc/api/v1/crops?filter=${name.lowercase()}"
+            val request = Request.Builder().url(url).get().build()
+            val response = withContext(Dispatchers.IO) { client.newCall(request).execute() }
+
+            response.body?.let { body ->
+                val json = JSONObject(body.string())
+                val data = json.getJSONArray("data")
+                if (data.length() > 0) {
+                    val attrs = data.getJSONObject(0).getJSONObject("attributes")
+                    PlantCareInfo(
+                        name = name,
+                        commonName = attrs.getString("name"),
+                        wateringDays = when (attrs.optString("watering", "Normal")) {
+                            "Low" -> 14
+                            "Moderate", "Normal" -> 7
+                            "High" -> 3
+                            else -> 7
+                        },
+                        sunlight = attrs.optString("sun_requirements", "Unknown")
+                    )
+                } else null
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     suspend fun identifyPlant(uri: Uri) {
@@ -103,20 +136,38 @@ fun AddPlantScreen(
             val client = OkHttpClient()
             val response = withContext(Dispatchers.IO) { client.newCall(request).execute() }
 
-            response.body?.let { body ->
-                val json = JSONObject(body.string())
-                val suggestions = json.getJSONArray("results")
-                if (suggestions.length() > 0) {
+            val responseBody = response.body?.string()
+            if (responseBody != null) {
+                val json = JSONObject(responseBody)
+                val suggestions = json.optJSONArray("results")
+                if (suggestions != null && suggestions.length() > 0) {
                     val first = suggestions.getJSONObject(0)
                     val species = first.getJSONObject("species")
-                    val scientificName = species.getString("scientificNameWithoutAuthor")
-                    plantName = scientificName
+                    scientificName = species.getString("scientificNameWithoutAuthor")
+                    val commonNamesArray = species.getJSONArray("commonNames")
+                    commonName =
+                        if (commonNamesArray.length() > 0) commonNamesArray.getString(0) else null
+                    confidencePercent = (first.getDouble("score") * 100).toInt()
+
                 } else {
-                    localError = "No plant identified."
+                    localError = "Plant not recognized. Try another image."
                 }
-            } ?: run {
-                localError = "Failed to get response from PlantNet."
+            } else {
+                localError = "PlantNet did not return any data."
             }
+
+
+            val careInfo = fetchPlantCareFromOpenFarm(scientificName)
+                ?: viewModel.careInfoList.firstOrNull {
+                    it.name.equals(scientificName, true) ||
+                            it.commonName.equals(commonName ?: "", true)
+                }
+
+            careInfo?.let {
+                wateringDays = it.wateringDays.toString()
+                sunlightAdvice = it.sunlight
+            }
+
 
         } catch (e: Exception) {
             localError = "Failed to identify plant: ${e.message}"
@@ -154,12 +205,24 @@ fun AddPlantScreen(
                     LaunchedEffect(it) {
                         identifyPlant(it)
                     }
+
+                    confidencePercent?.let { percent ->
+                        Text("Confidence: $percent%", style = MaterialTheme.typography.bodySmall)
+                    }
+
+                    commonName?.let {
+                        Text("Common name: $it", style = MaterialTheme.typography.bodySmall)
+                    }
+                    sunlightAdvice?.let {
+                        Text("☀️ Suggested sunlight: $it", style = MaterialTheme.typography.bodySmall)
+                    }
+
                 }
 
                 OutlinedTextField(
-                    value = plantName,
-                    onValueChange = { plantName = it },
-                    label = { Text("Plant name") },
+                    value = nickname,
+                    onValueChange = { nickname = it },
+                    label = { Text("Your name for the plant (optional)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -191,11 +254,9 @@ fun AddPlantScreen(
                     Text("Save Plant")
                 }
             }
-
         }
     }
 }
-
 
 @Composable
 fun DropdownMenuBox(
@@ -227,4 +288,3 @@ fun DropdownMenuBox(
         }
     }
 }
-
