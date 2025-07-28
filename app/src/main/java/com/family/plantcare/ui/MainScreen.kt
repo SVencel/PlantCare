@@ -10,6 +10,14 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.material.SwipeToDismiss
+import androidx.compose.material.DismissDirection
+import androidx.compose.material.DismissValue
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.rememberDismissState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -21,6 +29,16 @@ import com.family.plantcare.viewmodel.MainViewModel
 import java.text.SimpleDateFormat
 import androidx.compose.material.icons.filled.Menu
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.launch
+import androidx.compose.animation.*
+import androidx.compose.animation.*
+import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.*
+import androidx.compose.ui.unit.dp
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.*
+import androidx.compose.ui.unit.dp
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,6 +56,7 @@ fun MainScreen(
     var profileDropdown by remember { mutableStateOf(false) }
 
     var showAddScreen by remember { mutableStateOf(false) }
+
 
     if (showAddScreen) {
         AddPlantScreen(onPlantAdded = {
@@ -129,15 +148,13 @@ fun MainScreen(
                 }
             }
         ) { padding ->
-            LazyColumn(
-                modifier = Modifier
-                    .padding(padding)
-                    .fillMaxSize()
-            ) {
-                items(plants.size) { index ->
-                    PlantCard(plant = plants[index])
-                }
-            }
+            PlantList(
+                plants = plants,
+                onDelete = { plant -> mainViewModel.deletePlant(plant) },
+                onWatered = { plant -> mainViewModel.markPlantWatered(plant) },
+                modifier = Modifier.padding(padding)
+            )
+
         }
     }
 }
@@ -170,6 +187,124 @@ fun PlantCard(plant: Plant) {
         }
     }
 }
+
+
+@OptIn(ExperimentalMaterialApi::class, ExperimentalAnimationApi::class)
+@Composable
+fun PlantList(
+    plants: List<Plant>,
+    onDelete: (Plant) -> Unit,
+    onWatered: (Plant) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var plantToConfirmDelete by remember { mutableStateOf<Plant?>(null) }
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    Box {
+        LazyColumn(
+            modifier = modifier.fillMaxSize()
+        ) {
+            items(
+                items = plants,
+                key = { plant -> plant.id }
+            ) { plant ->
+                AnimatedVisibility(
+                    visible = true,
+                    exit = shrinkVertically(animationSpec = tween(300)) + fadeOut()
+                ) {
+                    val dismissState = rememberDismissState(
+                        confirmStateChange = { state ->
+                            when (state) {
+                                DismissValue.DismissedToStart -> { // left swipe → delete
+                                    plantToConfirmDelete = plant
+                                    false
+                                }
+                                DismissValue.DismissedToStart, DismissValue.DismissedToEnd -> false
+                                DismissValue.DismissedToEnd -> { // right swipe → watered
+                                    onWatered(plant)
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("💧 ${plant.name} watered!")
+                                    }
+                                    false
+                                }
+                                else -> false
+                            }
+                        }
+                    )
+
+                    SwipeToDismiss(
+                        state = dismissState,
+                        directions = setOf(
+                            DismissDirection.StartToEnd, // right swipe = watered
+                            DismissDirection.EndToStart   // left swipe = delete
+                        ),
+                        background = {
+                            val direction = dismissState.dismissDirection
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(8.dp),
+                                contentAlignment = when (direction) {
+                                    DismissDirection.StartToEnd -> Alignment.CenterStart
+                                    DismissDirection.EndToStart -> Alignment.CenterEnd
+                                    else -> Alignment.Center
+                                }
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (direction == DismissDirection.StartToEnd) {
+                                        Icon(
+                                            imageVector = Icons.Default.Done,
+                                            contentDescription = "Watered",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Watered", color = MaterialTheme.colorScheme.primary)
+                                    } else if (direction == DismissDirection.EndToStart) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Delete",
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                                    }
+                                }
+                            }
+                        },
+                        dismissContent = { PlantCard(plant = plant) }
+                    )
+                }
+            }
+        }
+
+        SnackbarHost(hostState = snackbarHostState)
+    }
+
+    // Delete confirmation
+    if (plantToConfirmDelete != null) {
+        AlertDialog(
+            onDismissRequest = { plantToConfirmDelete = null },
+            title = { Text("Confirm Delete") },
+            text = { Text("Are you sure you want to delete ${plantToConfirmDelete!!.name}?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val plant = plantToConfirmDelete!!
+                    plantToConfirmDelete = null
+                    onDelete(plant)
+                }) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { plantToConfirmDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
 
 fun daysUntil(timestamp: Long): Long {
     val diff = timestamp - System.currentTimeMillis()

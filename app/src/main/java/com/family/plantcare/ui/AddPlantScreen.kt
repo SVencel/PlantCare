@@ -75,6 +75,7 @@ fun AddPlantScreen(
             name = nickname.ifBlank { scientificName.trim() },
             ownerId = if (selectedHousehold == null) userId else null,
             householdId = selectedHousehold,
+            wateringDays = days,
             nextWateringDate = System.currentTimeMillis() + days * 24 * 60 * 60 * 1000,
             imageUrl = viewModel.copyImageToInternalStorage(context, imageUri!!),
             commonName = commonName,

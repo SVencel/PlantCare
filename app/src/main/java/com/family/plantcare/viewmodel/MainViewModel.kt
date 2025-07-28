@@ -112,15 +112,9 @@ class MainViewModel : ViewModel() {
     }
 
     fun deletePlant(plant: Plant) {
-        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val docRef = db.collection("plants").document(plant.id)
 
-        val collectionRef = if (plant.householdId != null) {
-            db.collection("households").document(plant.householdId).collection("plants")
-        } else {
-            db.collection("users").document(userId).collection("plants")
-        }
-
-        collectionRef.document(plant.id).delete()
+        docRef.delete()
             .addOnSuccessListener {
                 _plants.value = _plants.value.filterNot { it.id == plant.id }
                 Log.d("DeletePlant", "Successfully deleted plant: ${plant.name}")
@@ -129,6 +123,25 @@ class MainViewModel : ViewModel() {
                 Log.e("DeletePlant", "Failed to delete plant: ${it.message}")
             }
     }
+
+    fun markPlantWatered(plant: Plant) {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+
+        val wateringIntervalDays = plant.wateringDays.takeIf { it > 0 } ?: 7
+        val newDate = System.currentTimeMillis() + wateringIntervalDays * 24 * 60 * 60 * 1000
+
+        val updatedPlant = plant.copy(nextWateringDate = newDate)
+
+        db.collection("plants").document(plant.id)
+            .set(updatedPlant)
+            .addOnSuccessListener {
+                Log.d("Watering", "${plant.name} watered. Next in $wateringIntervalDays days")
+            }
+            .addOnFailureListener {
+                Log.e("Watering", "Failed to update watering: ${it.message}")
+            }
+    }
+
 
 
 }
