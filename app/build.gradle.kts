@@ -74,6 +74,7 @@ dependencies {
     implementation(libs.androidx.activity.compose.v182)
 
     implementation(libs.androidx.material)
+    implementation(libs.androidx.work.runtime.ktx)
 
 
 }

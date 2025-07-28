@@ -14,11 +14,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import android.Manifest
+import android.os.Build
+import androidx.core.app.ActivityCompat
 import com.family.plantcare.ui.LoginScreen
 import com.family.plantcare.ui.MainScreen
 import com.google.firebase.FirebaseApp
 import com.family.plantcare.ui.theme.PlantCareTheme
 import com.google.firebase.auth.FirebaseAuth
+import androidx.work.*
+import com.family.plantcare.notifications.WateringWorker
+import java.util.concurrent.TimeUnit
+
 
 class MainActivity : ComponentActivity() {
 
@@ -28,7 +35,17 @@ class MainActivity : ComponentActivity() {
         // ✅ Initialize Firebase
         FirebaseApp.initializeApp(this)
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                101
+            )
+        }
+
         Log.d("PlantCare", "Firebase initialized!")
+
+        scheduleDailyWateringCheck()
 
         setContent {
             PlantCareTheme {
@@ -50,17 +67,16 @@ class MainActivity : ComponentActivity() {
 
 
     }
-}
 
-@Composable
-fun WelcomeScreen() {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("🌱 Welcome to PlantCare!", style = MaterialTheme.typography.headlineSmall)
-        Spacer(modifier = Modifier.height(16.dp))
-        Text("Firebase has been initialized successfully.")
+    private fun scheduleDailyWateringCheck() {
+        val workRequest = PeriodicWorkRequestBuilder<WateringWorker>(1, TimeUnit.DAYS)
+            .setInitialDelay(1, TimeUnit.HOURS) // first run delay
+            .build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "watering_check",
+            ExistingPeriodicWorkPolicy.UPDATE,
+            workRequest
+        )
     }
 }
