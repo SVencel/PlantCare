@@ -71,22 +71,35 @@ fun AddPlantScreen(
         }
 
         val userId = user?.id ?: return
-        val plant = Plant(
-            name = nickname.ifBlank { scientificName.trim() },
-            ownerId = if (selectedHousehold == null) userId else null,
-            householdId = selectedHousehold,
-            wateringDays = days,
-            nextWateringDate = System.currentTimeMillis() + days * 24 * 60 * 60 * 1000,
-            imageUrl = viewModel.copyImageToInternalStorage(context, imageUri!!),
-            commonName = commonName,
-            confidence = confidencePercent?.toDouble(),
-            gbifUrl = gbifUrl
-        )
 
-        viewModel.addPlant(plant)
-        Toast.makeText(context, "Plant added!", Toast.LENGTH_SHORT).show()
-        onPlantAdded()
+        imageUri?.let { uri ->
+            viewModel.uploadImageAndGetUrl(context, uri) { url ->
+                if (url == null) {
+                    localError = "Failed to upload image."
+                    return@uploadImageAndGetUrl
+                }
+
+                val plant = Plant(
+                    name = nickname.ifBlank { scientificName.trim() },
+                    ownerId = if (selectedHousehold == null) userId else null,
+                    householdId = selectedHousehold,
+                    wateringDays = days,
+                    nextWateringDate = System.currentTimeMillis() + days * 24 * 60 * 60 * 1000,
+                    imageUrl = url, // ✅ Firebase-hosted URL
+                    commonName = commonName,
+                    confidence = confidencePercent?.toDouble(),
+                    gbifUrl = gbifUrl
+                )
+
+                viewModel.addPlant(plant)
+                Toast.makeText(context, "Plant added!", Toast.LENGTH_SHORT).show()
+                onPlantAdded()
+            }
+        } ?: run {
+            localError = "Please pick an image."
+        }
     }
+
 
     suspend fun identifyPlant(uri: Uri) {
         localError = null

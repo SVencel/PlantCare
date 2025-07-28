@@ -11,5 +11,7 @@ data class Plant(
     val householdId: String? = null,
     val wateringDays: Int = 7,
     val nextWateringDate: Long = 0L,
+    val lastWatered: Long? = null,
+    val timesWatered: Int = 0,
     val createdAt: Long = System.currentTimeMillis()
 )

@@ -15,6 +15,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import com.google.firebase.storage.FirebaseStorage
+import java.util.UUID
 import org.json.JSONArray
 import java.io.File
 
@@ -77,21 +79,25 @@ class MainViewModel : ViewModel() {
         db.collection("plants").document(doc.id).set(plant.copy(id = doc.id))
     }
 
-    fun copyImageToInternalStorage(context: Context, uri: Uri): String {
-        return try {
-            val inputStream = context.contentResolver.openInputStream(uri)
-                ?: return ""
-            val fileName = "plant_${System.currentTimeMillis()}.jpg"
-            val file = File(context.filesDir, fileName)
-            inputStream.use { input ->
-                file.outputStream().use { output ->
-                    input.copyTo(output)
-                }
-            }
-            file.absolutePath
-        } catch (e: Exception) {
-            ""
+    fun uploadImageAndGetUrl(context: Context, uri: Uri, onResult: (String?) -> Unit) {
+        val storageRef = FirebaseStorage.getInstance().reference
+        val fileName = "plants/${UUID.randomUUID()}.jpg"
+        val imageRef = storageRef.child(fileName)
+
+        val inputStream = context.contentResolver.openInputStream(uri)
+        val bytes = inputStream?.readBytes()
+
+        if (bytes == null) {
+            onResult(null)
+            return
         }
+
+        val uploadTask = imageRef.putBytes(bytes)
+        uploadTask.addOnSuccessListener {
+            imageRef.downloadUrl.addOnSuccessListener { downloadUri ->
+                onResult(downloadUri.toString()) // ✅ Firebase URL
+            }.addOnFailureListener { onResult(null) }
+        }.addOnFailureListener { onResult(null) }
     }
 
 
@@ -124,22 +130,25 @@ class MainViewModel : ViewModel() {
             }
     }
 
-    fun markPlantWatered(plant: Plant) {
-        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-
+    fun markPlantWatered(plant: Plant): Boolean {
+        val now = System.currentTimeMillis()
         val wateringIntervalDays = plant.wateringDays.takeIf { it > 0 } ?: 7
-        val newDate = System.currentTimeMillis() + wateringIntervalDays * 24 * 60 * 60 * 1000
+        val threshold = plant.nextWateringDate - (wateringIntervalDays * 24 * 60 * 60 * 1000 / 3)
 
-        val updatedPlant = plant.copy(nextWateringDate = newDate)
+        // 🚫 block early watering
+        if (plant.lastWatered != null && now < threshold) {
+            return false
+        }
 
-        db.collection("plants").document(plant.id)
-            .set(updatedPlant)
-            .addOnSuccessListener {
-                Log.d("Watering", "${plant.name} watered. Next in $wateringIntervalDays days")
-            }
-            .addOnFailureListener {
-                Log.e("Watering", "Failed to update watering: ${it.message}")
-            }
+        val newDate = now + wateringIntervalDays * 24 * 60 * 60 * 1000
+        val updatedPlant = plant.copy(
+            nextWateringDate = newDate,
+            lastWatered = now,
+            timesWatered = plant.timesWatered + 1
+        )
+
+        db.collection("plants").document(plant.id).set(updatedPlant)
+        return true
     }
 
 

@@ -1,44 +1,36 @@
 package com.family.plantcare.ui
 
-
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.SwipeToDismiss
 import androidx.compose.material.DismissDirection
 import androidx.compose.material.DismissValue
 import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.rememberDismissState
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.filled.Done
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.family.plantcare.model.Plant
 import com.family.plantcare.viewmodel.MainViewModel
-import java.text.SimpleDateFormat
-import androidx.compose.material.icons.filled.Menu
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import androidx.compose.animation.*
-import androidx.compose.animation.*
-import androidx.compose.foundation.lazy.items
-import androidx.compose.runtime.*
-import androidx.compose.ui.unit.dp
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.lazy.items
-import androidx.compose.runtime.*
-import androidx.compose.ui.unit.dp
+import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,7 +38,6 @@ import java.util.*
 fun MainScreen(
     mainViewModel: MainViewModel = viewModel(),
     onLogout: () -> Unit
-
 ) {
     val plants by mainViewModel.plants.collectAsState()
     val user by mainViewModel.currentUser.collectAsState()
@@ -54,16 +45,14 @@ fun MainScreen(
 
     var expanded by remember { mutableStateOf(false) }
     var profileDropdown by remember { mutableStateOf(false) }
-
     var showAddScreen by remember { mutableStateOf(false) }
 
+    // ✅ Track the selected plant for details
+    var selectedPlant by remember { mutableStateOf<Plant?>(null) }
 
     if (showAddScreen) {
-        AddPlantScreen(onPlantAdded = {
-            showAddScreen = false
-        })
+        AddPlantScreen(onPlantAdded = { showAddScreen = false })
     } else {
-
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -140,10 +129,8 @@ fun MainScreen(
                     }
                 )
             },
-
             floatingActionButton = {
                 FloatingActionButton(onClick = { showAddScreen = true }) {
-
                     Icon(Icons.Default.Add, contentDescription = "Add Plant")
                 }
             }
@@ -151,20 +138,28 @@ fun MainScreen(
             PlantList(
                 plants = plants,
                 onDelete = { plant -> mainViewModel.deletePlant(plant) },
-                onWatered = { plant -> mainViewModel.markPlantWatered(plant) },
+                onWatered = { plant -> mainViewModel.markPlantWatered(plant) },                onSelect = { plant -> selectedPlant = plant },
                 modifier = Modifier.padding(padding)
             )
 
+            // ✅ Show detail dialog if a plant is selected
+            selectedPlant?.let { plant ->
+                PlantDetailDialog(
+                    plant = plant,
+                    onDismiss = { selectedPlant = null }
+                )
+            }
         }
     }
 }
 
 @Composable
-fun PlantCard(plant: Plant) {
+fun PlantCard(plant: Plant, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp)
+            .clickable { onClick() }
     ) {
         Row(modifier = Modifier.padding(16.dp)) {
             AsyncImage(
@@ -174,11 +169,7 @@ fun PlantCard(plant: Plant) {
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text(
-                    text = plant.name, // user-given name or scientific
-                    style = MaterialTheme.typography.titleMedium
-                )
-
+                Text(text = plant.name, style = MaterialTheme.typography.titleMedium)
                 if (!plant.commonName.isNullOrBlank()) {
                     Text(text = "Common: ${plant.commonName}")
                 }
@@ -188,13 +179,56 @@ fun PlantCard(plant: Plant) {
     }
 }
 
+@Composable
+fun PlantDetailDialog(plant: Plant, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                AsyncImage(
+                    model = plant.imageUrl ?: "",
+                    contentDescription = plant.name,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                )
+                Text(plant.name, style = MaterialTheme.typography.headlineSmall)
+                plant.commonName?.let {
+                    Text("Common name: $it", style = MaterialTheme.typography.bodyMedium)
+                }
+                Text("Water every ${plant.wateringDays} day(s)", style = MaterialTheme.typography.bodyMedium)
+                Text("Next watering in ${daysUntil(plant.nextWateringDate)} days", style = MaterialTheme.typography.bodyMedium)
+
+                Text("Times watered: ${plant.timesWatered}", style = MaterialTheme.typography.bodyMedium)
+
+                Text("Added: ${formatDate(plant.createdAt)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(16.dp))
+                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+                    Text("Close")
+                }
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterialApi::class, ExperimentalAnimationApi::class)
 @Composable
 fun PlantList(
     plants: List<Plant>,
     onDelete: (Plant) -> Unit,
-    onWatered: (Plant) -> Unit,
+    onWatered: (Plant) -> Boolean,
+    onSelect: (Plant) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var plantToConfirmDelete by remember { mutableStateOf<Plant?>(null) }
@@ -202,13 +236,8 @@ fun PlantList(
     val snackbarHostState = remember { SnackbarHostState() }
 
     Box {
-        LazyColumn(
-            modifier = modifier.fillMaxSize()
-        ) {
-            items(
-                items = plants,
-                key = { plant -> plant.id }
-            ) { plant ->
+        LazyColumn(modifier = modifier.fillMaxSize()) {
+            items(items = plants, key = { it.id }) { plant ->
                 AnimatedVisibility(
                     visible = true,
                     exit = shrinkVertically(animationSpec = tween(300)) + fadeOut()
@@ -216,18 +245,22 @@ fun PlantList(
                     val dismissState = rememberDismissState(
                         confirmStateChange = { state ->
                             when (state) {
-                                DismissValue.DismissedToStart -> { // left swipe → delete
+                                DismissValue.DismissedToStart -> {
                                     plantToConfirmDelete = plant
                                     false
                                 }
-                                DismissValue.DismissedToStart, DismissValue.DismissedToEnd -> false
-                                DismissValue.DismissedToEnd -> { // right swipe → watered
-                                    onWatered(plant)
+
+                                DismissValue.DismissedToEnd -> {
+                                    val success = onWatered(plant)
                                     scope.launch {
-                                        snackbarHostState.showSnackbar("💧 ${plant.name} watered!")
+                                        snackbarHostState.showSnackbar(
+                                            if (success) "💧 ${plant.name} watered!"
+                                            else "🚫 Too early to water ${plant.name}!"
+                                        )
                                     }
                                     false
                                 }
+
                                 else -> false
                             }
                         }
@@ -236,11 +269,16 @@ fun PlantList(
                     SwipeToDismiss(
                         state = dismissState,
                         directions = setOf(
-                            DismissDirection.StartToEnd, // right swipe = watered
-                            DismissDirection.EndToStart   // left swipe = delete
+                            DismissDirection.StartToEnd,
+                            DismissDirection.EndToStart
                         ),
                         background = {
                             val direction = dismissState.dismissDirection
+                            val isEarly = direction == DismissDirection.StartToEnd &&
+                                    plant.lastWatered != null &&
+                                    System.currentTimeMillis() < plant.nextWateringDate -
+                                    (plant.wateringDays * 24 * 60 * 60 * 1000 / 3)
+
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -253,13 +291,29 @@ fun PlantList(
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     if (direction == DismissDirection.StartToEnd) {
-                                        Icon(
-                                            imageVector = Icons.Default.Done,
-                                            contentDescription = "Watered",
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
-                                        Spacer(Modifier.width(8.dp))
-                                        Text("Watered", color = MaterialTheme.colorScheme.primary)
+                                        if (isEarly) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = "Too early",
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(
+                                                "Too Early!",
+                                                color = MaterialTheme.colorScheme.error
+                                            )
+                                        } else {
+                                            Icon(
+                                                imageVector = Icons.Default.Done,
+                                                contentDescription = "Watered",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(
+                                                "Watered",
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
                                     } else if (direction == DismissDirection.EndToStart) {
                                         Icon(
                                             imageVector = Icons.Default.Delete,
@@ -272,16 +326,17 @@ fun PlantList(
                                 }
                             }
                         },
-                        dismissContent = { PlantCard(plant = plant) }
+                        dismissContent = {
+                            PlantCard(plant = plant, onClick = { onSelect(plant) })
+                        }
                     )
+
                 }
             }
         }
-
         SnackbarHost(hostState = snackbarHostState)
     }
 
-    // Delete confirmation
     if (plantToConfirmDelete != null) {
         AlertDialog(
             onDismissRequest = { plantToConfirmDelete = null },
@@ -305,10 +360,9 @@ fun PlantList(
     }
 }
 
-
 fun daysUntil(timestamp: Long): Long {
     val diff = timestamp - System.currentTimeMillis()
-    return (diff / (1000 * 60 * 60 * 24)).coerceAtLeast(0)
+    return kotlin.math.ceil(diff / (1000.0 * 60 * 60 * 24)).toLong().coerceAtLeast(0)
 }
 
 fun formatDate(timestamp: Long): String {
