@@ -30,7 +30,10 @@ import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material.FractionalThreshold
+import androidx.compose.ui.input.pointer.pointerInput
+import com.family.plantcare.viewmodel.HouseholdViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -43,11 +46,16 @@ fun MainScreen(
     val plants by mainViewModel.plants.collectAsState()
     val user by mainViewModel.currentUser.collectAsState()
     val selectedHouseholdId by mainViewModel.selectedHouseholdId.collectAsState()
+    val householdViewModel: HouseholdViewModel = viewModel()
+
 
     var expanded by remember { mutableStateOf(false) }
     var profileDropdown by remember { mutableStateOf(false) }
     var showAddScreen by remember { mutableStateOf(false) }
     var showHouseholdScreen by remember { mutableStateOf(false) }
+
+    var showLeaveDialog by remember { mutableStateOf(false) }
+    var selectedHouseholdForLeave by remember { mutableStateOf<String?>(null) }
 
 
     // ✅ Track the selected plant for details
@@ -89,14 +97,25 @@ fun MainScreen(
 
                                 user?.households?.take(6)?.forEach { householdId ->
                                     val name = householdNames[householdId] ?: "Household"
+
                                     DropdownMenuItem(
                                         text = { Text("Household: $name") },
                                         onClick = {
                                             mainViewModel.loadPlants(householdId)
                                             expanded = false
+                                        },
+                                        trailingIcon = {
+                                            IconButton(onClick = {
+                                                selectedHouseholdForLeave = householdId
+                                                showLeaveDialog = true
+                                            }) {
+                                                Icon(Icons.Default.Delete, contentDescription = "Leave")
+                                            }
                                         }
                                     )
+
                                 }
+
 
                                 DropdownMenuItem(
                                     text = { Text("Create/Join Household") },
@@ -188,7 +207,30 @@ fun MainScreen(
                 }
             }
 
-
+            if (showLeaveDialog && selectedHouseholdForLeave != null) {
+                AlertDialog(
+                    onDismissRequest = { showLeaveDialog = false },
+                    title = { Text("Leave Household") },
+                    text = { Text("Are you sure you want to leave this household? If you are the last member, it will be deleted permanently.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            householdViewModel.leaveHousehold(selectedHouseholdForLeave!!) { success ->
+                                if (success) {
+                                    mainViewModel.reloadUser()
+                                    mainViewModel.loadPlants(null)
+                                    expanded = false
+                                }
+                                showLeaveDialog = false
+                            }
+                        }) { Text("Yes, Leave") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showLeaveDialog = false }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
+            }
         }
     }
 }

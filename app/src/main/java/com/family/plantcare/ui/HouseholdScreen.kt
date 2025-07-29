@@ -61,7 +61,7 @@ fun HouseholdScreen(
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Create Household") }
 
-            Divider()
+            HorizontalDivider()
 
             // Join Household
             OutlinedTextField(
@@ -84,31 +84,6 @@ fun HouseholdScreen(
             error?.let {
                 Text(it, color = MaterialTheme.colorScheme.error)
             }
-
-            Divider()
-
-            var deleteCode by remember { mutableStateOf("") }
-
-            OutlinedTextField(
-                value = deleteCode,
-                onValueChange = { deleteCode = it },
-                label = { Text("Enter Household ID to Delete (testing)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Button(
-                onClick = {
-                    householdViewModel.deleteHousehold(deleteCode) { success ->
-                        if (success) onClose()
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            ) {
-                Text("Delete Household", color = MaterialTheme.colorScheme.onError)
-            }
-
         }
     }
 }

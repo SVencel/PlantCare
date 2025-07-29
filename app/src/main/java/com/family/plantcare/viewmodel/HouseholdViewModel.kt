@@ -85,6 +85,49 @@ class HouseholdViewModel : ViewModel() {
             }
     }
 
+    fun leaveHousehold(householdId: String, onResult: (Boolean) -> Unit) {
+        val uid = auth.currentUser?.uid ?: return
+
+        val householdRef = db.collection("households").document(householdId)
+        householdRef.get().addOnSuccessListener { snapshot ->
+            if (!snapshot.exists()) {
+                _error.value = "Household not found"
+                onResult(false)
+                return@addOnSuccessListener
+            }
+
+            val members = snapshot.get("members") as? List<String> ?: emptyList()
+
+            // Remove current user
+            householdRef.update("members", FieldValue.arrayRemove(uid))
+            db.collection("users").document(uid)
+                .update("households", FieldValue.arrayRemove(householdId))
+
+            val updatedMembers = members.filterNot { it == uid }
+            if (updatedMembers.isEmpty()) {
+                // ✅ Last member → delete household
+                // Delete its plants first
+                db.collection("plants").whereEqualTo("householdId", householdId).get()
+                    .addOnSuccessListener { plants ->
+                        for (plantDoc in plants) {
+                            db.collection("plants").document(plantDoc.id).delete()
+                        }
+                        householdRef.delete().addOnSuccessListener {
+                            _success.value = true
+                            onResult(true)
+                        }
+                    }
+            } else {
+                _success.value = true
+                onResult(true)
+            }
+        }.addOnFailureListener { e ->
+            _error.value = "Failed: ${e.message}"
+            onResult(false)
+        }
+    }
+
+
     fun deleteHousehold(householdId: String, onResult: (Boolean) -> Unit) {
         val uid = auth.currentUser?.uid ?: return
 
