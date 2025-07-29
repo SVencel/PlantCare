@@ -34,6 +34,9 @@ class MainViewModel : ViewModel() {
     private val _selectedHouseholdId = MutableStateFlow<String?>(null)
     val selectedHouseholdId: StateFlow<String?> = _selectedHouseholdId
 
+    private val _households = MutableStateFlow<Map<String, String>>(emptyMap())
+    val households: StateFlow<Map<String, String>> = _households
+
     init {
         loadUserData()
     }
@@ -98,6 +101,23 @@ class MainViewModel : ViewModel() {
                 onResult(downloadUri.toString()) // ✅ Firebase URL
             }.addOnFailureListener { onResult(null) }
         }.addOnFailureListener { onResult(null) }
+    }
+
+    fun reloadUser() {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        db.collection("users").document(uid).get()
+            .addOnSuccessListener { snapshot ->
+                val updatedUser = snapshot.toObject(User::class.java)
+                _currentUser.value = updatedUser
+
+                updatedUser?.households?.take(6)?.forEach { hid ->
+                    db.collection("households").document(hid).get()
+                        .addOnSuccessListener { hSnap ->
+                            val name = hSnap.getString("name") ?: "Unknown"
+                            _households.value += (hid to name)
+                        }
+                }
+            }
     }
 
 

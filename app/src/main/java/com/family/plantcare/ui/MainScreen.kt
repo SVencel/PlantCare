@@ -47,6 +47,8 @@ fun MainScreen(
     var expanded by remember { mutableStateOf(false) }
     var profileDropdown by remember { mutableStateOf(false) }
     var showAddScreen by remember { mutableStateOf(false) }
+    var showHouseholdScreen by remember { mutableStateOf(false) }
+
 
     // ✅ Track the selected plant for details
     var selectedPlant by remember { mutableStateOf<Plant?>(null) }
@@ -83,20 +85,24 @@ fun MainScreen(
                                         expanded = false
                                     }
                                 )
-                                user?.households?.forEach { householdId ->
+                                val householdNames by mainViewModel.households.collectAsState()
+
+                                user?.households?.take(6)?.forEach { householdId ->
+                                    val name = householdNames[householdId] ?: "Household"
                                     DropdownMenuItem(
-                                        text = { Text("Household: $householdId") },
+                                        text = { Text("Household: $name") },
                                         onClick = {
                                             mainViewModel.loadPlants(householdId)
                                             expanded = false
                                         }
                                     )
                                 }
+
                                 DropdownMenuItem(
                                     text = { Text("Create/Join Household") },
                                     onClick = {
-                                        // TODO: Navigate to household creation screen
                                         expanded = false
+                                        showHouseholdScreen = true
                                     }
                                 )
                             }
@@ -138,7 +144,8 @@ fun MainScreen(
                     Icon(Icons.Default.Add, contentDescription = "Add Plant")
                 }
             }
-        ) { padding ->
+        )
+        { padding ->
             PlantList(
                 plants = plants,
                 onDelete = { plant -> mainViewModel.deletePlant(plant) },
@@ -153,6 +160,35 @@ fun MainScreen(
                     onDismiss = { selectedPlant = null }
                 )
             }
+
+            if (showHouseholdScreen) {
+                Dialog(onDismissRequest = { showHouseholdScreen = false }) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .wrapContentHeight(),
+                        shape = MaterialTheme.shapes.medium,
+                        tonalElevation = 6.dp
+                    ) {
+                        HouseholdScreen(
+                            onClose = { showHouseholdScreen = false },
+                            onHouseholdChanged = { newHouseholdId ->
+                                mainViewModel.reloadUser()
+                                mainViewModel.loadPlants(newHouseholdId)
+                                showHouseholdScreen = false
+                            },
+                            onHouseholdDeleted = {
+                                mainViewModel.reloadUser()
+                                mainViewModel.loadPlants(null) // back to personal plants
+                                showHouseholdScreen = false
+                            }
+                        )
+
+                    }
+                }
+            }
+
+
         }
     }
 }
