@@ -8,6 +8,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,10 +27,12 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddPlantScreen(
     viewModel: MainViewModel = viewModel(),
-    onPlantAdded: () -> Unit
+    onPlantAdded: () -> Unit,
+    onCancel: () -> Unit
 ) {
     val user by viewModel.currentUser.collectAsState()
     val context = LocalContext.current
@@ -164,7 +168,21 @@ fun AddPlantScreen(
         }
     }
 
-    Scaffold { padding ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Add a Plant") },
+                navigationIcon = {
+                    IconButton(onClick = { onCancel() }) {
+                        Icon(
+                            imageVector = Icons.Default.Close, // or Icons.Default.ArrowBack
+                            contentDescription = "Cancel"
+                        )
+                    }
+                }
+            )
+        }
+    ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -178,10 +196,7 @@ fun AddPlantScreen(
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
                     .padding(bottom = 100.dp)
-
             ) {
-                Text("Add a Plant", style = MaterialTheme.typography.headlineSmall)
-
                 Button(onClick = { galleryLauncher.launch("image/*") }) {
                     Text("Pick Image")
                 }

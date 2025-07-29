@@ -30,6 +30,7 @@ import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.material.FractionalThreshold
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -51,7 +52,10 @@ fun MainScreen(
     var selectedPlant by remember { mutableStateOf<Plant?>(null) }
 
     if (showAddScreen) {
-        AddPlantScreen(onPlantAdded = { showAddScreen = false })
+        AddPlantScreen(
+            onPlantAdded = { showAddScreen = false },
+            onCancel = { showAddScreen = false }
+        )
     } else {
         Scaffold(
             topBar = {
@@ -232,108 +236,96 @@ fun PlantList(
     modifier: Modifier = Modifier
 ) {
     var plantToConfirmDelete by remember { mutableStateOf<Plant?>(null) }
-    val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     Box {
         LazyColumn(modifier = modifier.fillMaxSize()) {
             items(items = plants, key = { it.id }) { plant ->
-                AnimatedVisibility(
-                    visible = true,
-                    exit = shrinkVertically(animationSpec = tween(300)) + fadeOut()
-                ) {
-                    val dismissState = rememberDismissState(
-                        confirmStateChange = { state ->
-                            when (state) {
-                                DismissValue.DismissedToStart -> {
-                                    plantToConfirmDelete = plant
-                                    false
-                                }
+                val dismissState = rememberDismissState()
 
-                                DismissValue.DismissedToEnd -> {
-                                    val success = onWatered(plant)
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar(
-                                            if (success) "💧 ${plant.name} watered!"
-                                            else "🚫 Too early to water ${plant.name}!"
-                                        )
-                                    }
-                                    false
-                                }
+                // ✅ React to changes after state updates
+                LaunchedEffect(dismissState.currentValue) {
+                    val direction = dismissState.dismissDirection
+                    val fraction = dismissState.progress.fraction
 
-                                else -> false
+                    when (dismissState.currentValue) {
+                        DismissValue.DismissedToStart -> {
+                            if (direction == DismissDirection.EndToStart && fraction >= 0.5f) {
+                                plantToConfirmDelete = plant
                             }
+                            dismissState.animateTo(DismissValue.Default,tween(200))
                         }
-                    )
-
-                    SwipeToDismiss(
-                        state = dismissState,
-                        directions = setOf(
-                            DismissDirection.StartToEnd,
-                            DismissDirection.EndToStart
-                        ),
-                        background = {
-                            val direction = dismissState.dismissDirection
-                            val isEarly = direction == DismissDirection.StartToEnd &&
-                                    plant.lastWatered != null &&
-                                    System.currentTimeMillis() < plant.nextWateringDate -
-                                    (plant.wateringDays * 24 * 60 * 60 * 1000 / 3)
-
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(8.dp),
-                                contentAlignment = when (direction) {
-                                    DismissDirection.StartToEnd -> Alignment.CenterStart
-                                    DismissDirection.EndToStart -> Alignment.CenterEnd
-                                    else -> Alignment.Center
-                                }
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    if (direction == DismissDirection.StartToEnd) {
-                                        if (isEarly) {
-                                            Icon(
-                                                imageVector = Icons.Default.Close,
-                                                contentDescription = "Too early",
-                                                tint = MaterialTheme.colorScheme.error
-                                            )
-                                            Spacer(Modifier.width(8.dp))
-                                            Text(
-                                                "Too Early!",
-                                                color = MaterialTheme.colorScheme.error
-                                            )
-                                        } else {
-                                            Icon(
-                                                imageVector = Icons.Default.Done,
-                                                contentDescription = "Watered",
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
-                                            Spacer(Modifier.width(8.dp))
-                                            Text(
-                                                "Watered",
-                                                color = MaterialTheme.colorScheme.primary
-                                            )
-                                        }
-                                    } else if (direction == DismissDirection.EndToStart) {
-                                        Icon(
-                                            imageVector = Icons.Default.Delete,
-                                            contentDescription = "Delete",
-                                            tint = MaterialTheme.colorScheme.error
-                                        )
-                                        Spacer(Modifier.width(8.dp))
-                                        Text("Delete", color = MaterialTheme.colorScheme.error)
-                                    }
+                        DismissValue.DismissedToEnd -> {
+                            if (direction == DismissDirection.StartToEnd && fraction >= 0.25f) {
+                                val success = onWatered(plant)
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        if (success) "💧 ${plant.name} watered!"
+                                        else "🚫 Too early to water ${plant.name}!"
+                                    )
                                 }
                             }
-                        },
-                        dismissContent = {
-                            PlantCard(plant = plant, onClick = { onSelect(plant) })
+                            dismissState.animateTo(DismissValue.Default, tween(200))
                         }
-                    )
-
+                        else -> {}
+                    }
                 }
+
+                SwipeToDismiss(
+                    state = dismissState,
+                    directions = setOf(
+                        DismissDirection.StartToEnd,
+                        DismissDirection.EndToStart
+                    ),
+                    dismissThresholds = { direction ->
+                        FractionalThreshold(
+                            if (direction == DismissDirection.EndToStart) 0.5f else 0.25f
+                        )
+                    },
+                    background = {
+                        val direction = dismissState.dismissDirection
+                        val isEarly = direction == DismissDirection.StartToEnd &&
+                                plant.lastWatered != null &&
+                                System.currentTimeMillis() < plant.nextWateringDate -
+                                (plant.wateringDays * 24 * 60 * 60 * 1000 / 3)
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(8.dp),
+                            contentAlignment = when (direction) {
+                                DismissDirection.StartToEnd -> Alignment.CenterStart
+                                DismissDirection.EndToStart -> Alignment.CenterEnd
+                                else -> Alignment.Center
+                            }
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (direction == DismissDirection.StartToEnd) {
+                                    if (isEarly) {
+                                        Icon(Icons.Default.Close, "Too early", tint = MaterialTheme.colorScheme.error)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Too Early!", color = MaterialTheme.colorScheme.error)
+                                    } else {
+                                        Icon(Icons.Default.Done, "Watered", tint = MaterialTheme.colorScheme.primary)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Watered", color = MaterialTheme.colorScheme.primary)
+                                    }
+                                } else if (direction == DismissDirection.EndToStart) {
+                                    Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                                }
+                            }
+                        }
+                    },
+                    dismissContent = {
+                        PlantCard(plant = plant, onClick = { onSelect(plant) })
+                    }
+                )
             }
         }
+
         SnackbarHost(hostState = snackbarHostState)
     }
 
@@ -359,6 +351,7 @@ fun PlantList(
         )
     }
 }
+
 
 fun daysUntil(timestamp: Long): Long {
     val diff = timestamp - System.currentTimeMillis()

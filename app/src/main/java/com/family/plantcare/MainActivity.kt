@@ -43,8 +43,6 @@ class MainActivity : ComponentActivity() {
             )
         }
 
-        Log.d("PlantCare", "Firebase initialized!")
-
         scheduleDailyWateringCheck()
 
         setContent {
