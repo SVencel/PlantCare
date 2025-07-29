@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.family.plantcare.model.Plant
 import com.family.plantcare.model.PlantCareInfo
 import com.family.plantcare.model.User
+import com.family.plantcare.ui.daysUntil
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
@@ -34,8 +35,10 @@ class MainViewModel : ViewModel() {
     private val _selectedHouseholdId = MutableStateFlow<String?>(null)
     val selectedHouseholdId: StateFlow<String?> = _selectedHouseholdId
 
-    private val _households = MutableStateFlow<Map<String, String>>(emptyMap())
-    val households: StateFlow<Map<String, String>> = _households
+
+    private val _households = MutableStateFlow<Map<String, Pair<String, String>>>(emptyMap())
+    // householdId -> (name, joinCode)
+    val households: StateFlow<Map<String, Pair<String, String>>> = _households
 
     init {
         loadUserData()
@@ -103,6 +106,7 @@ class MainViewModel : ViewModel() {
         }.addOnFailureListener { onResult(null) }
     }
 
+
     fun reloadUser() {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         db.collection("users").document(uid).get()
@@ -114,11 +118,13 @@ class MainViewModel : ViewModel() {
                     db.collection("households").document(hid).get()
                         .addOnSuccessListener { hSnap ->
                             val name = hSnap.getString("name") ?: "Unknown"
-                            _households.value += (hid to name)
+                            val code = hSnap.getString("joinCode") ?: "------"
+                            _households.value = _households.value + (hid to (name to code))
                         }
                 }
             }
     }
+
 
 
     fun loadPlants(householdId: String?) {
@@ -171,6 +177,28 @@ class MainViewModel : ViewModel() {
         return true
     }
 
+    fun updatePlant(plant: Plant, newName: String, newWateringDays: Int, onResult: (Boolean) -> Unit) {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
 
+        // Calculate current remaining days
+        val currentRemaining = ((plant.nextWateringDate - System.currentTimeMillis()) / (1000 * 60 * 60 * 24)).toInt()
+            .coerceAtLeast(0)
+
+        // Choose the smaller of new vs remaining days
+        val chosenDays = minOf(newWateringDays, currentRemaining.takeIf { it > 0 } ?: newWateringDays)
+
+        val adjustedNextDate = System.currentTimeMillis() + chosenDays * 24L * 60 * 60 * 1000
+
+        val updatedPlant = plant.copy(
+            name = newName,
+            wateringDays = newWateringDays,
+            nextWateringDate = adjustedNextDate
+        )
+
+        db.collection("plants").document(plant.id)
+            .set(updatedPlant)
+            .addOnSuccessListener { onResult(true) }
+            .addOnFailureListener { onResult(false) }
+    }
 
 }

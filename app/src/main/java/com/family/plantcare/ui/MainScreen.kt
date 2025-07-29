@@ -1,5 +1,6 @@
 package com.family.plantcare.ui
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,6 +31,7 @@ import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material.FractionalThreshold
 import androidx.compose.ui.input.pointer.pointerInput
@@ -69,14 +71,33 @@ fun MainScreen(
     } else {
         Scaffold(
             topBar = {
+                val householdMap by mainViewModel.households.collectAsState()
+                val currentHousehold = selectedHouseholdId?.let { householdMap[it] }
+                val currentHouseholdName = currentHousehold?.first
+                val currentHouseholdCode = currentHousehold?.second
+
                 TopAppBar(
                     title = {
-                        Text(
-                            text = when {
-                                selectedHouseholdId == null -> "Your Plants"
-                                else -> "Household Plants"
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(2.dp), // ✅ small spacing between lines
+                            horizontalAlignment = Alignment.Start
+                        ) {
+                            Text(
+                                text = when {
+                                    selectedHouseholdId == null -> "Your Plants"
+                                    currentHouseholdName != null -> "${currentHouseholdName} Plants"
+                                    else -> "Household Plants"
+                                },
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                            if (selectedHouseholdId != null && currentHouseholdCode != null) {
+                                Text(
+                                    text = "Join code: $currentHouseholdCode",
+                                    style = MaterialTheme.typography.labelMedium, // ✅ smaller style
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
-                        )
+                        }
                     },
                     navigationIcon = {
                         Box(modifier = Modifier.padding(start = 16.dp)) {
@@ -176,7 +197,8 @@ fun MainScreen(
             selectedPlant?.let { plant ->
                 PlantDetailDialog(
                     plant = plant,
-                    onDismiss = { selectedPlant = null }
+                    onDismiss = { selectedPlant = null },
+                    mainViewModel = mainViewModel
                 )
             }
 
@@ -262,7 +284,17 @@ fun PlantCard(plant: Plant, onClick: () -> Unit) {
 }
 
 @Composable
-fun PlantDetailDialog(plant: Plant, onDismiss: () -> Unit) {
+fun PlantDetailDialog(
+    plant: Plant,
+    onDismiss: () -> Unit,
+    mainViewModel: MainViewModel = viewModel()
+) {
+    var editMode by remember { mutableStateOf(false) }
+    var name by remember { mutableStateOf(plant.name) }
+    var wateringDays by remember { mutableStateOf(plant.wateringDays.toString()) }
+    var isSaving by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier
@@ -282,27 +314,87 @@ fun PlantDetailDialog(plant: Plant, onDismiss: () -> Unit) {
                         .fillMaxWidth()
                         .height(200.dp)
                 )
-                Text(plant.name, style = MaterialTheme.typography.headlineSmall)
-                plant.commonName?.let {
-                    Text("Common name: $it", style = MaterialTheme.typography.bodyMedium)
+
+                if (editMode) {
+                    // ✅ Editable fields
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("Plant Name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = wateringDays,
+                        onValueChange = { wateringDays = it },
+                        label = { Text("Water every X days") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    // ✅ Read-only info
+                    Text(plant.name, style = MaterialTheme.typography.headlineSmall)
+                    plant.commonName?.let {
+                        Text("Common name: $it", style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Text("Water every ${plant.wateringDays} day(s)", style = MaterialTheme.typography.bodyMedium)
+                    Text("Next watering in ${daysUntil(plant.nextWateringDate)} days", style = MaterialTheme.typography.bodyMedium)
+                    Text("Times watered: ${plant.timesWatered}", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Added: ${formatDate(plant.createdAt)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-                Text("Water every ${plant.wateringDays} day(s)", style = MaterialTheme.typography.bodyMedium)
-                Text("Next watering in ${daysUntil(plant.nextWateringDate)} days", style = MaterialTheme.typography.bodyMedium)
 
-                Text("Times watered: ${plant.timesWatered}", style = MaterialTheme.typography.bodyMedium)
-
-                Text("Added: ${formatDate(plant.createdAt)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
                 Spacer(Modifier.height(16.dp))
-                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
-                    Text("Close")
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f).padding(end = 8.dp)
+                    ) { Text("Close") }
+
+                    if (editMode) {
+                        Button(
+                            onClick = {
+                                val days = wateringDays.toIntOrNull()
+                                if (name.isNotBlank() && days != null && days > 0) {
+                                    isSaving = true
+                                    mainViewModel.updatePlant(plant, name, days) { success ->
+                                        isSaving = false
+                                        if (success) {
+                                            Toast.makeText(context, "Plant updated!", Toast.LENGTH_SHORT).show()
+                                            onDismiss()
+                                        } else {
+                                            Toast.makeText(context, "Failed to update plant", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                } else {
+                                    Toast.makeText(context, "Invalid input", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
+                        ) {
+                            if (isSaving) CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                            else Text("Save")
+                        }
+                    } else {
+                        Button(
+                            onClick = { editMode = true },
+                            modifier = Modifier.weight(1f).padding(start = 8.dp)
+                        ) { Text("Edit") }
+                    }
                 }
             }
         }
     }
 }
+
 
 @OptIn(ExperimentalMaterialApi::class, ExperimentalAnimationApi::class)
 @Composable
