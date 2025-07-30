@@ -14,6 +14,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -26,6 +28,10 @@ import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import android.graphics.BitmapFactory
+import android.graphics.Bitmap
+import java.io.ByteArrayOutputStream
+import android.util.Base64
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,6 +67,27 @@ fun AddPlantScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri -> imageUri = uri }
 
+
+    fun compressToBase64(context: android.content.Context, uri: android.net.Uri, maxSizeKb: Int = 200): String? {
+        return try {
+            val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+            val bitmap = BitmapFactory.decodeStream(inputStream) ?: return null
+            var quality = 90
+            val stream = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, quality, stream)
+
+            while (stream.size() / 1024 > maxSizeKb && quality > 10) {
+                stream.reset()
+                quality -= 10
+                bitmap.compress(Bitmap.CompressFormat.JPEG, quality, stream)
+            }
+
+            Base64.encodeToString(stream.toByteArray(), Base64.DEFAULT)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     fun savePlant() {
         localError = null
         if (scientificName.trim().isEmpty() && nickname.trim().isEmpty()) {
@@ -77,33 +104,32 @@ fun AddPlantScreen(
         val userId = user?.id ?: return
 
         imageUri?.let { uri ->
-            viewModel.uploadImageAndGetUrl(context, uri) { url ->
-                if (url == null) {
-                    localError = "Failed to upload image."
-                    return@uploadImageAndGetUrl
-                }
+            val base64Image = compressToBase64(context, uri, maxSizeKb = 200)
 
-                val plant = Plant(
-                    name = nickname.ifBlank { scientificName.trim() },
-                    ownerId = if (selectedHousehold == null) userId else null,
-                    householdId = selectedHousehold,
-                    wateringDays = days,
-                    nextWateringDate = System.currentTimeMillis() + days * 24 * 60 * 60 * 1000,
-                    imageUrl = url, // ✅ Firebase-hosted URL
-                    commonName = commonName,
-                    confidence = confidencePercent?.toDouble(),
-                    gbifUrl = gbifUrl
-                )
-
-                viewModel.addPlant(plant)
-                Toast.makeText(context, "Plant added!", Toast.LENGTH_SHORT).show()
-                onPlantAdded()
+            if (base64Image == null) {
+                localError = "Failed to process image."
+                return@let
             }
+
+            val plant = Plant(
+                name = nickname.ifBlank { scientificName.trim() },
+                ownerId = if (selectedHousehold == null) userId else null,
+                householdId = selectedHousehold,
+                wateringDays = days,
+                nextWateringDate = System.currentTimeMillis() + days * 24 * 60 * 60 * 1000,
+                imageBase64 = base64Image,
+                commonName = commonName,
+                confidence = confidencePercent?.toDouble(),
+                gbifUrl = gbifUrl
+            )
+
+            viewModel.addPlant(plant)
+            Toast.makeText(context, "Plant added!", Toast.LENGTH_SHORT).show()
+            onPlantAdded()
         } ?: run {
             localError = "Please pick an image."
         }
     }
-
 
     suspend fun identifyPlant(uri: Uri) {
         localError = null
@@ -278,8 +304,13 @@ fun AddPlantScreen(
 
                 Text("Assign to:")
 
+                val householdMap by viewModel.households.collectAsState()
+                val householdOptions = listOf(null) + (user?.households ?: emptyList())
+
                 DropdownMenuBox(
-                    options = householdOptions,
+                    options = householdOptions.map { id ->
+                        id to (if (id == null) "Private" else (householdMap[id]?.first ?: "Household"))
+                    },
                     selected = selectedHousehold,
                     onSelected = { selectedHousehold = it }
                 )
@@ -301,7 +332,7 @@ fun AddPlantScreen(
 
 @Composable
 fun DropdownMenuBox(
-    options: List<String?>,
+    options: List<Pair<String?, String>>,
     selected: String?,
     onSelected: (String?) -> Unit
 ) {
@@ -311,21 +342,23 @@ fun DropdownMenuBox(
         onClick = { expanded = true },
         modifier = Modifier.fillMaxWidth()
     ) {
-        Text(text = selected ?: "Private")
+        val selectedName = options.find { it.first == selected }?.second ?: "Private"
+        Text(text = selectedName)
     }
 
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = { expanded = false }
     ) {
-        options.forEach { householdId ->
+        options.forEach { (id, name) ->
             DropdownMenuItem(
-                text = { Text(householdId ?: "Private") },
+                text = { Text(name) },
                 onClick = {
-                    onSelected(householdId)
+                    onSelected(id)
                     expanded = false
                 }
             )
         }
     }
 }
+

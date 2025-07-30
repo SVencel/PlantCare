@@ -13,5 +13,6 @@ data class Plant(
     val nextWateringDate: Long = 0L,
     val lastWatered: Long? = null,
     val timesWatered: Int = 0,
+    val imageBase64: String? = null,
     val createdAt: Long = System.currentTimeMillis()
 )

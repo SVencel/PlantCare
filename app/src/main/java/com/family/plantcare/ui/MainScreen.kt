@@ -37,6 +37,14 @@ import androidx.compose.material.FractionalThreshold
 import androidx.compose.ui.input.pointer.pointerInput
 import com.family.plantcare.viewmodel.HouseholdViewModel
 import java.text.SimpleDateFormat
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.Image
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.asImageBitmap
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -266,11 +274,8 @@ fun PlantCard(plant: Plant, onClick: () -> Unit) {
             .clickable { onClick() }
     ) {
         Row(modifier = Modifier.padding(16.dp)) {
-            AsyncImage(
-                model = plant.imageUrl ?: "",
-                contentDescription = plant.name,
-                modifier = Modifier.size(64.dp)
-            )
+            PlantImage(plant = plant, modifier = Modifier.size(64.dp))
+
             Spacer(modifier = Modifier.width(16.dp))
             Column {
                 Text(text = plant.name, style = MaterialTheme.typography.titleMedium)
@@ -307,13 +312,7 @@ fun PlantDetailDialog(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                AsyncImage(
-                    model = plant.imageUrl ?: "",
-                    contentDescription = plant.name,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                )
+                PlantImage(plant = plant, modifier = Modifier.size(64.dp))
 
                 if (editMode) {
                     // ✅ Editable fields
@@ -522,6 +521,37 @@ fun PlantList(
     }
 }
 
+@Composable
+fun PlantImage(plant: Plant, modifier: Modifier = Modifier) {
+    plant.imageBase64?.let {
+        val imageBytes = android.util.Base64.decode(it, android.util.Base64.DEFAULT)
+        val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+        if (bitmap != null) {
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = plant.name,
+                modifier = modifier,
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Box(
+                modifier = modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("No image available", style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    } ?: Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(200.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text("No image available", style = MaterialTheme.typography.bodyMedium)
+    }
+}
 
 fun daysUntil(timestamp: Long): Long {
     val diff = timestamp - System.currentTimeMillis()

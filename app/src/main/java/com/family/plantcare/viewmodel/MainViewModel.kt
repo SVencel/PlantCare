@@ -20,6 +20,10 @@ import com.google.firebase.storage.FirebaseStorage
 import java.util.UUID
 import org.json.JSONArray
 import java.io.File
+import okhttp3.*
+import org.json.JSONObject
+import java.io.IOException
+import android.util.Base64
 
 class MainViewModel : ViewModel() {
 
@@ -85,28 +89,6 @@ class MainViewModel : ViewModel() {
         db.collection("plants").document(doc.id).set(plant.copy(id = doc.id))
     }
 
-    fun uploadImageAndGetUrl(context: Context, uri: Uri, onResult: (String?) -> Unit) {
-        val storageRef = FirebaseStorage.getInstance().reference
-        val fileName = "plants/${UUID.randomUUID()}.jpg"
-        val imageRef = storageRef.child(fileName)
-
-        val inputStream = context.contentResolver.openInputStream(uri)
-        val bytes = inputStream?.readBytes()
-
-        if (bytes == null) {
-            onResult(null)
-            return
-        }
-
-        val uploadTask = imageRef.putBytes(bytes)
-        uploadTask.addOnSuccessListener {
-            imageRef.downloadUrl.addOnSuccessListener { downloadUri ->
-                onResult(downloadUri.toString()) // ✅ Firebase URL
-            }.addOnFailureListener { onResult(null) }
-        }.addOnFailureListener { onResult(null) }
-    }
-
-
     fun reloadUser() {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         db.collection("users").document(uid).get()
@@ -119,7 +101,7 @@ class MainViewModel : ViewModel() {
                         .addOnSuccessListener { hSnap ->
                             val name = hSnap.getString("name") ?: "Unknown"
                             val code = hSnap.getString("joinCode") ?: "------"
-                            _households.value = _households.value + (hid to (name to code))
+                            _households.value += (hid to (name to code))
                         }
                 }
             }
