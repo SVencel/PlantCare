@@ -19,11 +19,6 @@ import kotlinx.coroutines.launch
 import com.google.firebase.storage.FirebaseStorage
 import java.util.UUID
 import org.json.JSONArray
-import java.io.File
-import okhttp3.*
-import org.json.JSONObject
-import java.io.IOException
-import android.util.Base64
 
 class MainViewModel : ViewModel() {
 
@@ -96,17 +91,24 @@ class MainViewModel : ViewModel() {
                 val updatedUser = snapshot.toObject(User::class.java)
                 _currentUser.value = updatedUser
 
+                // ✅ Clear household map before repopulating
+                _households.value = emptyMap()
+
                 updatedUser?.households?.take(6)?.forEach { hid ->
                     db.collection("households").document(hid).get()
                         .addOnSuccessListener { hSnap ->
-                            val name = hSnap.getString("name") ?: "Unknown"
-                            val code = hSnap.getString("joinCode") ?: "------"
-                            _households.value += (hid to (name to code))
+                            if (hSnap != null && hSnap.exists()) {
+                                val name = hSnap.getString("name") ?: "Unknown"
+                                val code = hSnap.getString("joinCode") ?: "------"
+                                _households.value += (hid to (name to code))
+                            }
                         }
                 }
             }
+            .addOnFailureListener { e ->
+                Log.e("MainViewModel", "Failed to reload user: ${e.message}")
+            }
     }
-
 
 
     fun loadPlants(householdId: String?) {

@@ -105,8 +105,6 @@ class HouseholdViewModel : ViewModel() {
 
             val updatedMembers = members.filterNot { it == uid }
             if (updatedMembers.isEmpty()) {
-                // ✅ Last member → delete household
-                // Delete its plants first
                 db.collection("plants").whereEqualTo("householdId", householdId).get()
                     .addOnSuccessListener { plants ->
                         for (plantDoc in plants) {
@@ -126,49 +124,4 @@ class HouseholdViewModel : ViewModel() {
             onResult(false)
         }
     }
-
-
-    fun deleteHousehold(householdId: String, onResult: (Boolean) -> Unit) {
-        val uid = auth.currentUser?.uid ?: return
-
-        val householdRef = db.collection("households").document(householdId)
-        householdRef.get().addOnSuccessListener { snapshot ->
-            if (!snapshot.exists()) {
-                _error.value = "Household not found"
-                onResult(false)
-                return@addOnSuccessListener
-            }
-
-            val members = snapshot.get("members") as? List<String> ?: emptyList()
-
-            // Remove household from each member's record
-            members.forEach { memberId ->
-                db.collection("users").document(memberId)
-                    .update("households", FieldValue.arrayRemove(householdId))
-            }
-
-            // Optionally: delete plants belonging to this household
-            db.collection("plants").whereEqualTo("householdId", householdId).get()
-                .addOnSuccessListener { plants ->
-                    for (plantDoc in plants) {
-                        db.collection("plants").document(plantDoc.id).delete()
-                    }
-                }
-
-            // Finally, delete household
-            householdRef.delete()
-                .addOnSuccessListener {
-                    _success.value = true
-                    onResult(true)
-                }
-                .addOnFailureListener { e ->
-                    _error.value = "Failed to delete: ${e.message}"
-                    onResult(false)
-                }
-        }.addOnFailureListener { e ->
-            _error.value = "Failed to fetch household: ${e.message}"
-            onResult(false)
-        }
-    }
-
 }

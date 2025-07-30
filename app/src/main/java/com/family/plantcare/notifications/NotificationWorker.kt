@@ -4,17 +4,18 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
+import android.content.pm.PackageManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.family.plantcare.R
+import com.family.plantcare.model.Plant
+import com.family.plantcare.model.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.family.plantcare.model.Plant
 import kotlinx.coroutines.tasks.await
-import android.content.pm.PackageManager
-import androidx.core.content.ContextCompat
 
 class WateringWorker(
     appContext: Context,
@@ -25,17 +26,40 @@ class WateringWorker(
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return Result.success()
         val db = FirebaseFirestore.getInstance()
 
-        val snapshot = db.collection("plants")
-            .whereEqualTo("ownerId", userId)
-            .get().await()
+        try {
+            // ✅ Load user to get household memberships
+            val userSnap = db.collection("users").document(userId).get().await()
+            val user = userSnap.toObject(User::class.java)
+            val householdIds = user?.households ?: emptyList()
 
-        val plants = snapshot.toObjects(Plant::class.java)
-        val now = System.currentTimeMillis()
+            // ✅ Query private plants
+            val privateSnap = db.collection("plants")
+                .whereEqualTo("ownerId", userId)
+                .get().await()
+            val privatePlants = privateSnap.toObjects(Plant::class.java)
 
-        val duePlants = plants.filter { it.nextWateringDate <= now }
+            // ✅ Query household plants (if any)
+            val householdPlants = mutableListOf<Plant>()
+            if (householdIds.isNotEmpty()) {
+                val chunks = householdIds.chunked(10) // Firestore whereIn supports max 10
+                for (chunk in chunks) {
+                    val snap = db.collection("plants")
+                        .whereIn("householdId", chunk)
+                        .get().await()
+                    householdPlants.addAll(snap.toObjects(Plant::class.java))
+                }
+            }
 
-        if (duePlants.isNotEmpty()) {
-            showNotification(duePlants.map { it.name })
+            // ✅ Combine all plants
+            val allPlants = privatePlants + householdPlants
+            val now = System.currentTimeMillis()
+            val duePlants = allPlants.filter { it.nextWateringDate <= now }
+
+            if (duePlants.isNotEmpty()) {
+                showNotification(duePlants.map { it.name })
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
 
         return Result.success()
@@ -43,7 +67,8 @@ class WateringWorker(
 
     private fun showNotification(plantNames: List<String>) {
         val channelId = "watering_reminders"
-        val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val manager =
+            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -61,13 +86,13 @@ class WateringWorker(
         }
 
         val notification = NotificationCompat.Builder(applicationContext, channelId)
-            .setSmallIcon(android.R.drawable.ic_menu_info_details) // fallback safe icon
+            .setSmallIcon(android.R.drawable.ic_menu_info_details)
             .setContentTitle("🌱 PlantCare Reminder")
             .setContentText(contentText)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
 
-        // ✅ Check runtime permission before notifying
+        // ✅ Only notify if POST_NOTIFICATIONS is granted
         if (ContextCompat.checkSelfPermission(
                 applicationContext,
                 android.Manifest.permission.POST_NOTIFICATIONS
