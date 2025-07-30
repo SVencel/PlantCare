@@ -14,8 +14,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -46,7 +44,7 @@ fun AddPlantScreen(
     var scientificName by remember { mutableStateOf("") }
     var commonName by remember { mutableStateOf<String?>(null) }
     var confidencePercent by remember { mutableStateOf<Int?>(null) }
-    var gbifUrl by remember { mutableStateOf<String?>(null) }
+    val gbifUrl by remember { mutableStateOf<String?>(null) }
 
     var nickname by remember { mutableStateOf("") }
     var selectedHousehold by remember { mutableStateOf<String?>(null) }
@@ -60,8 +58,6 @@ fun AddPlantScreen(
     LaunchedEffect(true) {
         viewModel.loadPlantCareInfo(context)
     }
-
-    val householdOptions = listOf(null) + (user?.households ?: emptyList())
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()

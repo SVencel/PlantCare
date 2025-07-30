@@ -10,7 +10,6 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.family.plantcare.R
 import com.family.plantcare.model.Plant
 import com.family.plantcare.model.User
 import com.google.firebase.auth.FirebaseAuth
