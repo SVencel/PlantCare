@@ -68,7 +68,8 @@ class MainViewModel : ViewModel() {
                             name = obj.getString("name"),
                             commonName = obj.getString("commonName"),
                             wateringDays = obj.getInt("wateringDays"),
-                            sunlight = obj.getString("sunlight")
+                            sunlight = obj.getString("sunlight"),
+                            oxygenOutput = obj.optDouble("oxygenOutput", 0.1)
                         )
                     )
                 }

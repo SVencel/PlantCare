@@ -4,5 +4,6 @@ data class PlantCareInfo(
     val name: String,
     val commonName: String,
     val wateringDays: Int,
-    val sunlight: String
+    val sunlight: String,
+    val oxygenOutput: Double? = null
 )

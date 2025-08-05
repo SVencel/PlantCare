@@ -24,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
 import com.family.plantcare.model.Plant
 import com.family.plantcare.viewmodel.MainViewModel
 import com.google.firebase.auth.FirebaseAuth
@@ -32,19 +31,15 @@ import kotlinx.coroutines.launch
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material.FractionalThreshold
-import androidx.compose.ui.input.pointer.pointerInput
 import com.family.plantcare.viewmodel.HouseholdViewModel
 import java.text.SimpleDateFormat
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.foundation.Image
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.asImageBitmap
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,6 +79,9 @@ fun MainScreen(
                 val currentHouseholdName = currentHousehold?.first
                 val currentHouseholdCode = currentHousehold?.second
 
+                val oxygenPerDay = plants.sumOf { it.oxygenOutput ?: 0.1 }
+                val adultsEquivalent = oxygenPerDay / 550.0
+
                 TopAppBar(
                     title = {
                         Column(
@@ -93,7 +91,7 @@ fun MainScreen(
                             Text(
                                 text = when {
                                     selectedHouseholdId == null -> "Your Plants"
-                                    currentHouseholdName != null -> "${currentHouseholdName} Plants"
+                                    currentHouseholdName != null -> "$currentHouseholdName Plants"
                                     else -> "Household Plants"
                                 },
                                 style = MaterialTheme.typography.titleLarge
@@ -101,10 +99,15 @@ fun MainScreen(
                             if (selectedHouseholdId != null && currentHouseholdCode != null) {
                                 Text(
                                     text = "Join code: $currentHouseholdCode",
-                                    style = MaterialTheme.typography.labelMedium, // ✅ smaller style
+                                    style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
+                            Text(
+                                text = "👤 x %.3f oxygen/day".format(adultsEquivalent),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     },
                     navigationIcon = {

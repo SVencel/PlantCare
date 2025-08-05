@@ -14,5 +14,6 @@ data class Plant(
     val lastWatered: Long? = null,
     val timesWatered: Int = 0,
     val imageBase64: String? = null,
+    val oxygenOutput: Double? = null,
     val createdAt: Long = System.currentTimeMillis()
 )

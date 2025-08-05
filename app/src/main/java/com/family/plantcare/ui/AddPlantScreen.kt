@@ -107,6 +107,11 @@ fun AddPlantScreen(
                 return@let
             }
 
+            val careInfo = viewModel.careInfoList.firstOrNull {
+                it.name.equals(scientificName.trim(), ignoreCase = true) ||
+                        it.commonName.equals(commonName?.trim(), ignoreCase = true)
+            }
+
             val plant = Plant(
                 name = nickname.ifBlank { scientificName.trim() },
                 ownerId = if (selectedHousehold == null) userId else null,
@@ -116,7 +121,8 @@ fun AddPlantScreen(
                 imageBase64 = base64Image,
                 commonName = commonName,
                 confidence = confidencePercent?.toDouble(),
-                gbifUrl = gbifUrl
+                gbifUrl = gbifUrl,
+                oxygenOutput = careInfo?.oxygenOutput ?: 0.1
             )
 
             viewModel.addPlant(plant)
