@@ -1,7 +1,6 @@
 package com.family.plantcare.viewmodel
 
 import android.content.Context
-import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
@@ -9,15 +8,12 @@ import androidx.lifecycle.viewModelScope
 import com.family.plantcare.model.Plant
 import com.family.plantcare.model.PlantCareInfo
 import com.family.plantcare.model.User
-import com.family.plantcare.ui.daysUntil
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import com.google.firebase.storage.FirebaseStorage
-import java.util.UUID
 import org.json.JSONArray
 
 class MainViewModel : ViewModel() {
@@ -111,6 +107,32 @@ class MainViewModel : ViewModel() {
             }
     }
 
+    private val _householdMembers = MutableStateFlow<List<String>>(emptyList())
+    val householdMembers: StateFlow<List<String>> = _householdMembers
+
+
+    private fun loadHouseholdMembers(householdId: String) {
+        val householdRef = db.collection("households").document(householdId)
+        householdRef.get().addOnSuccessListener { snapshot ->
+            if (snapshot.exists()) {
+                val members = snapshot.get("members") as? List<String> ?: emptyList()
+
+                if (members.isNotEmpty()) {
+                    db.collection("users")
+                        .whereIn("id", members)
+                        .get()
+                        .addOnSuccessListener { userDocs ->
+                            val usernames = userDocs.mapNotNull { it.getString("username") }
+                            _householdMembers.value = usernames
+                        }
+                } else {
+                    _householdMembers.value = emptyList()
+                }
+            }
+        }
+    }
+
+
 
     fun loadPlants(householdId: String?) {
         _selectedHouseholdId.value = householdId
@@ -125,6 +147,11 @@ class MainViewModel : ViewModel() {
                 val list = snapshot.toObjects(Plant::class.java)
                 _plants.value = list
             }
+        }
+        if (householdId != null) {
+            loadHouseholdMembers(householdId)
+        } else {
+            _householdMembers.value = emptyList()
         }
     }
 

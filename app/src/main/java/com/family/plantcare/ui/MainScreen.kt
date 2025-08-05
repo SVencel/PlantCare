@@ -52,221 +52,246 @@ fun MainScreen(
     val user by mainViewModel.currentUser.collectAsState()
     val selectedHouseholdId by mainViewModel.selectedHouseholdId.collectAsState()
     val householdViewModel: HouseholdViewModel = viewModel()
+    val householdMap by mainViewModel.households.collectAsState()
+    val householdMembers by mainViewModel.householdMembers.collectAsState()
 
+    val currentHousehold = selectedHouseholdId?.let { householdMap[it] }
+    val currentHouseholdName = currentHousehold?.first
+    val currentHouseholdCode = currentHousehold?.second
 
     var expanded by remember { mutableStateOf(false) }
     var profileDropdown by remember { mutableStateOf(false) }
     var showAddScreen by remember { mutableStateOf(false) }
     var showHouseholdScreen by remember { mutableStateOf(false) }
-
     var showLeaveDialog by remember { mutableStateOf(false) }
     var selectedHouseholdForLeave by remember { mutableStateOf<String?>(null) }
-
-
-    // ✅ Track the selected plant for details
     var selectedPlant by remember { mutableStateOf<Plant?>(null) }
+    var showHouseholdInfoDialog by remember { mutableStateOf(false) }
 
     if (showAddScreen) {
         AddPlantScreen(
             onPlantAdded = { showAddScreen = false },
             onCancel = { showAddScreen = false }
         )
-    } else {
-        Scaffold(
-            topBar = {
-                val householdMap by mainViewModel.households.collectAsState()
-                val currentHousehold = selectedHouseholdId?.let { householdMap[it] }
-                val currentHouseholdName = currentHousehold?.first
-                val currentHouseholdCode = currentHousehold?.second
+        return
+    }
 
-                val oxygenPerDay = plants.sumOf { it.oxygenOutput ?: 0.1 }
-                val adultsEquivalent = oxygenPerDay / 550.0
+    val oxygenPerDay = plants.sumOf { it.oxygenOutput ?: 0.1 }
+    val adultsEquivalent = oxygenPerDay / 550.0
 
-                TopAppBar(
-                    title = {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(2.dp), // ✅ small spacing between lines
-                            horizontalAlignment = Alignment.Start
-                        ) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                        horizontalAlignment = Alignment.Start,
+                        modifier = if (selectedHouseholdId != null) Modifier.clickable {
+                            showHouseholdInfoDialog = true
+                        } else Modifier
+                    ) {
+                        Text(
+                            text = when {
+                                selectedHouseholdId == null -> "Your Plants"
+                                currentHouseholdName != null -> "$currentHouseholdName Plants"
+                                else -> "Household Plants"
+                            },
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        if (selectedHouseholdId != null && currentHouseholdCode != null) {
                             Text(
-                                text = when {
-                                    selectedHouseholdId == null -> "Your Plants"
-                                    currentHouseholdName != null -> "$currentHouseholdName Plants"
-                                    else -> "Household Plants"
-                                },
-                                style = MaterialTheme.typography.titleLarge
-                            )
-                            if (selectedHouseholdId != null && currentHouseholdCode != null) {
-                                Text(
-                                    text = "Join code: $currentHouseholdCode",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Text(
-                                text = "👤 x %.3f oxygen/day".format(adultsEquivalent),
+                                text = "Join code: $currentHouseholdCode",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                    },
-                    navigationIcon = {
-                        Box(modifier = Modifier.padding(start = 16.dp)) {
-                            IconButton(onClick = { expanded = true }) {
-                                Icon(Icons.Default.Menu, contentDescription = "Menu")
-                            }
-                            DropdownMenu(
-                                expanded = expanded,
-                                onDismissRequest = { expanded = false }) {
-                                DropdownMenuItem(
-                                    text = { Text("Private") },
-                                    onClick = {
-                                        mainViewModel.loadPlants(null)
-                                        expanded = false
-                                    }
-                                )
-                                val householdNames by mainViewModel.households.collectAsState()
-
-                                user?.households?.take(6)?.forEach { householdId ->
-                                    val name = householdNames[householdId] ?: "Household"
-
-                                    DropdownMenuItem(
-                                        text = { Text("Household: $name") },
-                                        onClick = {
-                                            mainViewModel.loadPlants(householdId)
-                                            expanded = false
-                                        },
-                                        trailingIcon = {
-                                            IconButton(onClick = {
-                                                selectedHouseholdForLeave = householdId
-                                                showLeaveDialog = true
-                                            }) {
-                                                Icon(Icons.Default.Delete, contentDescription = "Leave")
-                                            }
-                                        }
-                                    )
-
-                                }
-
-
-                                DropdownMenuItem(
-                                    text = { Text("Create/Join Household") },
-                                    onClick = {
-                                        expanded = false
-                                        showHouseholdScreen = true
-                                    }
-                                )
-                            }
-                        }
-                    },
-                    actions = {
-                        Box(modifier = Modifier.padding(end = 16.dp)) {
-                            IconButton(onClick = { profileDropdown = true }) {
-                                Icon(Icons.Default.AccountCircle, contentDescription = "Profile")
-                            }
-                            DropdownMenu(
-                                expanded = profileDropdown,
-                                onDismissRequest = { profileDropdown = false }) {
-                                user?.let {
-                                    DropdownMenuItem(
-                                        text = { Text("Member since: ${formatDate(it.joinDate)}") },
-                                        onClick = {}
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Plant count: ${plants.size}") },
-                                        onClick = {}
-                                    )
-                                    HorizontalDivider()
-                                    DropdownMenuItem(
-                                        text = { Text("Logout") },
-                                        onClick = {
-                                            FirebaseAuth.getInstance().signOut()
-                                            onLogout()
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                )
-            },
-            floatingActionButton = {
-                FloatingActionButton(onClick = { showAddScreen = true }) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Plant")
-                }
-            }
-        )
-        { padding ->
-            PlantList(
-                plants = plants,
-                onDelete = { plant -> mainViewModel.deletePlant(plant) },
-                onWatered = { plant -> mainViewModel.markPlantWatered(plant) },                onSelect = { plant -> selectedPlant = plant },
-                modifier = Modifier.padding(padding)
-            )
-
-            // ✅ Show detail dialog if a plant is selected
-            selectedPlant?.let { plant ->
-                PlantDetailDialog(
-                    plant = plant,
-                    onDismiss = { selectedPlant = null },
-                    mainViewModel = mainViewModel
-                )
-            }
-
-            if (showHouseholdScreen) {
-                Dialog(onDismissRequest = { showHouseholdScreen = false }) {
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight(),
-                        shape = MaterialTheme.shapes.medium,
-                        tonalElevation = 6.dp
-                    ) {
-                        HouseholdScreen(
-                            onClose = { showHouseholdScreen = false },
-                            onHouseholdChanged = { newHouseholdId ->
-                                mainViewModel.reloadUser()
-                                mainViewModel.loadPlants(newHouseholdId)
-                                showHouseholdScreen = false
-                            },
-                            onHouseholdDeleted = {
-                                mainViewModel.reloadUser()
-                                mainViewModel.loadPlants(null) // back to personal plants
-                                showHouseholdScreen = false
-                            }
+                        Text(
+                            text = "👤 x %.3f oxygen/day".format(adultsEquivalent),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-
                     }
-                }
-            }
-
-            if (showLeaveDialog && selectedHouseholdForLeave != null) {
-                AlertDialog(
-                    onDismissRequest = { showLeaveDialog = false },
-                    title = { Text("Leave Household") },
-                    text = { Text("Are you sure you want to leave this household? If you are the last member, it will be deleted permanently.") },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            householdViewModel.leaveHousehold(selectedHouseholdForLeave!!) { success ->
-                                if (success) {
-                                    mainViewModel.reloadUser()
+                },
+                navigationIcon = {
+                    Box(modifier = Modifier.padding(start = 16.dp)) {
+                        IconButton(onClick = { expanded = true }) {
+                            Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        }
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Private") },
+                                onClick = {
                                     mainViewModel.loadPlants(null)
                                     expanded = false
                                 }
-                                showLeaveDialog = false
+                            )
+                            val householdNames by mainViewModel.households.collectAsState()
+
+                            user?.households?.take(6)?.forEach { householdId ->
+                                val name = householdNames[householdId] ?: "Household"
+                                DropdownMenuItem(
+                                    text = { Text("Household: $name") },
+                                    onClick = {
+                                        mainViewModel.loadPlants(householdId)
+                                        expanded = false
+                                    },
+                                    trailingIcon = {
+                                        IconButton(onClick = {
+                                            selectedHouseholdForLeave = householdId
+                                            showLeaveDialog = true
+                                        }) {
+                                            Icon(Icons.Default.Delete, contentDescription = "Leave")
+                                        }
+                                    }
+                                )
                             }
-                        }) { Text("Yes, Leave") }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showLeaveDialog = false }) {
-                            Text("Cancel")
+
+                            DropdownMenuItem(
+                                text = { Text("Create/Join Household") },
+                                onClick = {
+                                    expanded = false
+                                    showHouseholdScreen = true
+                                }
+                            )
                         }
                     }
-                )
+                },
+                actions = {
+                    Box(modifier = Modifier.padding(end = 16.dp)) {
+                        IconButton(onClick = { profileDropdown = true }) {
+                            Icon(Icons.Default.AccountCircle, contentDescription = "Profile")
+                        }
+                        DropdownMenu(
+                            expanded = profileDropdown,
+                            onDismissRequest = { profileDropdown = false }) {
+                            user?.let {
+                                DropdownMenuItem(
+                                    text = { Text("Member since: ${formatDate(it.joinDate)}") },
+                                    onClick = {}
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Plant count: ${plants.size}") },
+                                    onClick = {}
+                                )
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = { Text("Logout") },
+                                    onClick = {
+                                        FirebaseAuth.getInstance().signOut()
+                                        onLogout()
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = { showAddScreen = true }) {
+                Icon(Icons.Default.Add, contentDescription = "Add Plant")
             }
+        }
+    ) { padding ->
+        PlantList(
+            plants = plants,
+            onDelete = { plant -> mainViewModel.deletePlant(plant) },
+            onWatered = { plant -> mainViewModel.markPlantWatered(plant) },
+            onSelect = { plant -> selectedPlant = plant },
+            modifier = Modifier.padding(padding)
+        )
+
+        selectedPlant?.let { plant ->
+            PlantDetailDialog(
+                plant = plant,
+                onDismiss = { selectedPlant = null },
+                mainViewModel = mainViewModel
+            )
+        }
+
+        if (showHouseholdScreen) {
+            Dialog(onDismissRequest = { showHouseholdScreen = false }) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight(),
+                    shape = MaterialTheme.shapes.medium,
+                    tonalElevation = 6.dp
+                ) {
+                    HouseholdScreen(
+                        onClose = { showHouseholdScreen = false },
+                        onHouseholdChanged = { newHouseholdId ->
+                            mainViewModel.reloadUser()
+                            mainViewModel.loadPlants(newHouseholdId)
+                            showHouseholdScreen = false
+                        },
+                        onHouseholdDeleted = {
+                            mainViewModel.reloadUser()
+                            mainViewModel.loadPlants(null)
+                            showHouseholdScreen = false
+                        }
+                    )
+                }
+            }
+        }
+
+        if (showLeaveDialog && selectedHouseholdForLeave != null) {
+            AlertDialog(
+                onDismissRequest = { showLeaveDialog = false },
+                title = { Text("Leave Household") },
+                text = { Text("Are you sure you want to leave this household? If you are the last member, it will be deleted permanently.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        householdViewModel.leaveHousehold(selectedHouseholdForLeave!!) { success ->
+                            if (success) {
+                                mainViewModel.reloadUser()
+                                mainViewModel.loadPlants(null)
+                                expanded = false
+                            }
+                            showLeaveDialog = false
+                        }
+                    }) { Text("Yes, Leave") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showLeaveDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        if (showHouseholdInfoDialog && selectedHouseholdId != null) {
+            AlertDialog(
+                onDismissRequest = { showHouseholdInfoDialog = false },
+                title = { Text(currentHouseholdName ?: "Household Info") },
+                text = {
+                    Column {
+                        currentHouseholdCode?.let {
+                            Text("Join code: $it")
+                            Spacer(Modifier.height(8.dp))
+                        }
+                        Text("👥 Members:")
+                        if (householdMembers.isEmpty()) {
+                            Text("No members found.")
+                        } else {
+                            householdMembers.forEach { username ->
+                                Text("• $username")
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showHouseholdInfoDialog = false }) {
+                        Text("Close")
+                    }
+                }
+            )
         }
     }
 }
+
 
 @Composable
 fun PlantCard(plant: Plant, onClick: () -> Unit) {
@@ -409,6 +434,7 @@ fun PlantList(
 ) {
     var plantToConfirmDelete by remember { mutableStateOf<Plant?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
+
     val scope = rememberCoroutineScope()
 
     Box {
