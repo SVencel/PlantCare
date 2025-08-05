@@ -194,14 +194,52 @@ fun MainScreen(
                 Icon(Icons.Default.Add, contentDescription = "Add Plant")
             }
         }
-    ) { padding ->
-        PlantList(
-            plants = plants,
-            onDelete = { plant -> mainViewModel.deletePlant(plant) },
-            onWatered = { plant -> mainViewModel.markPlantWatered(plant) },
-            onSelect = { plant -> selectedPlant = plant },
-            modifier = Modifier.padding(padding)
-        )
+    ) {
+        padding ->
+        val todayPlants = plants.filter { daysUntil(it.nextWateringDate).toInt() == 0 }
+        val futurePlants = plants.filter { daysUntil(it.nextWateringDate) > 0 }
+            .sortedBy { daysUntil(it.nextWateringDate) }
+
+        LazyColumn(modifier = Modifier.padding(padding)) {
+            if (todayPlants.isNotEmpty()) {
+                item {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("💧 Water Today", style = MaterialTheme.typography.titleMedium)
+                        IconButton(onClick = {
+                            todayPlants.forEach { plant ->
+                                mainViewModel.markPlantWatered(plant)
+                            }
+                        }) {
+                            Icon(Icons.Default.Done, contentDescription = "Mark all watered")
+                        }
+                    }
+                }
+
+                items(todayPlants, key = { it.id }) { plant ->
+                    PlantSwipeItem(
+                        plant = plant,
+                        mainViewModel = mainViewModel,
+                        onSelect = { selectedPlant = it }
+                    )
+                }
+            }
+
+            items(futurePlants, key = { it.id }) { plant ->
+                PlantSwipeItem(
+                    plant = plant,
+                    mainViewModel = mainViewModel,
+                    onSelect = { selectedPlant = it }
+                )
+            }
+        }
+
+
 
         selectedPlant?.let { plant ->
             PlantDetailDialog(
@@ -291,6 +329,118 @@ fun MainScreen(
         }
     }
 }
+
+@OptIn(ExperimentalMaterialApi::class, ExperimentalAnimationApi::class)
+@Composable
+fun PlantSwipeItem(
+    plant: Plant,
+    mainViewModel: MainViewModel,
+    onSelect: (Plant) -> Unit
+) {
+    val dismissState = rememberDismissState()
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(dismissState.currentValue) {
+        val direction = dismissState.dismissDirection
+        val fraction = dismissState.progress.fraction
+
+        when (dismissState.currentValue) {
+            DismissValue.DismissedToStart -> {
+                if (direction == DismissDirection.EndToStart && fraction >= 0.5f) {
+                    showDeleteConfirm = true
+                }
+                dismissState.animateTo(DismissValue.Default, tween(200))
+            }
+            DismissValue.DismissedToEnd -> {
+                if (direction == DismissDirection.StartToEnd && fraction >= 0.25f) {
+                    val tooEarly = daysUntil(plant.nextWateringDate) > 1
+                    if (tooEarly) {
+                        scope.launch {
+                            snackbarHostState.showSnackbar("🚫 Too early to water ${plant.name}!")
+                        }
+                    } else {
+                        val success = mainViewModel.markPlantWatered(plant)
+                        scope.launch {
+                            snackbarHostState.showSnackbar(
+                                if (success) "💧 ${plant.name} watered!"
+                                else "🚫 Too early to water ${plant.name}!"
+                            )
+                        }
+                    }
+                }
+                dismissState.animateTo(DismissValue.Default, tween(200))
+            }
+            else -> {}
+        }
+    }
+
+    SwipeToDismiss(
+        state = dismissState,
+        directions = setOf(DismissDirection.StartToEnd, DismissDirection.EndToStart),
+        dismissThresholds = { direction ->
+            FractionalThreshold(if (direction == DismissDirection.EndToStart) 0.5f else 0.25f)
+        },
+        background = {
+            val direction = dismissState.dismissDirection
+            val isTooEarly = daysUntil(plant.nextWateringDate) > 1
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp),
+                contentAlignment = when (direction) {
+                    DismissDirection.StartToEnd -> Alignment.CenterStart
+                    DismissDirection.EndToStart -> Alignment.CenterEnd
+                    else -> Alignment.Center
+                }
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (direction == DismissDirection.StartToEnd) {
+                        if (isTooEarly) {
+                            Icon(Icons.Default.Close, "Too early", tint = MaterialTheme.colorScheme.error)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Too Early!", color = MaterialTheme.colorScheme.error)
+                        } else {
+                            Icon(Icons.Default.Done, "Watered", tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Watered", color = MaterialTheme.colorScheme.primary)
+                        }
+                    } else if (direction == DismissDirection.EndToStart) {
+                        Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+        },
+        dismissContent = {
+            PlantCard(plant = plant, onClick = { onSelect(plant) })
+        }
+    )
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Confirm Delete") },
+            text = { Text("Are you sure you want to delete ${plant.name}?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    mainViewModel.deletePlant(plant)
+                    showDeleteConfirm = false
+                }) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
 
 
 @Composable
