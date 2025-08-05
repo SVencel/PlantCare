@@ -90,14 +90,27 @@ fun MainScreen(
                             showHouseholdInfoDialog = true
                         } else Modifier
                     ) {
-                        Text(
-                            text = when {
-                                selectedHouseholdId == null -> "Your Plants"
-                                currentHouseholdName != null -> "$currentHouseholdName Plants"
-                                else -> "Household Plants"
-                            },
-                            style = MaterialTheme.typography.titleLarge
-                        )
+                        val hasNewActivity by mainViewModel.hasNewActivity.collectAsState()
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = when {
+                                    selectedHouseholdId == null -> "Your Plants"
+                                    currentHouseholdName != null -> "$currentHouseholdName Plants"
+                                    else -> "Household Plants"
+                                },
+                                style = MaterialTheme.typography.titleLarge
+                            )
+
+                            if (hasNewActivity) {
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    "🟢", // or use an Icon if you prefer
+                                    style = MaterialTheme.typography.titleLarge
+                                )
+                            }
+                        }
+
                         if (selectedHouseholdId != null && currentHouseholdCode != null) {
                             Text(
                                 text = "Join code: $currentHouseholdCode",
@@ -301,9 +314,18 @@ fun MainScreen(
         }
 
         if (showHouseholdInfoDialog && selectedHouseholdId != null) {
+            LaunchedEffect(Unit) {
+                mainViewModel.markActivitiesSeen()
+            }
             AlertDialog(
                 onDismissRequest = { showHouseholdInfoDialog = false },
-                title = { Text(currentHouseholdName ?: "Household Info") },
+                title = {
+                    val hasNewActivity by mainViewModel.hasNewActivity.collectAsState()
+                    Text(
+                        (currentHouseholdName ?: "Household Info") +
+                                if (hasNewActivity) " (New activity!)" else ""
+                    )
+                },
                 text = {
                     Column {
                         currentHouseholdCode?.let {
@@ -318,6 +340,25 @@ fun MainScreen(
                                 Text("• $username")
                             }
                         }
+                        val activities by mainViewModel.activities.collectAsState()
+                        val members by mainViewModel.householdMembers.collectAsState()
+
+                        Spacer(Modifier.height(12.dp))
+                        Text("📝 Recent Activity:", style = MaterialTheme.typography.titleMedium)
+
+                        if (activities.isEmpty()) {
+                            Text("No recent activity yet.")
+                        } else {
+                            activities.take(5).forEach { act ->
+                                val plantName = act["plantName"] as? String ?: "Unknown"
+                                val userId = act["userId"] as? String ?: "Someone"
+                                val displayName = members.find { it == userId } ?: userId
+                                val timestamp = act["timestamp"] as? Long
+                                val dateText = timestamp?.let { formatDate(it) } ?: ""
+                                Text("• $displayName watered $plantName ($dateText)")
+                            }
+                        }
+
                     }
                 },
                 confirmButton = {

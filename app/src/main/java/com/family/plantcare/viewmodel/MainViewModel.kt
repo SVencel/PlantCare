@@ -11,8 +11,7 @@ import com.family.plantcare.model.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 
@@ -30,10 +29,34 @@ class MainViewModel : ViewModel() {
     private val _selectedHouseholdId = MutableStateFlow<String?>(null)
     val selectedHouseholdId: StateFlow<String?> = _selectedHouseholdId
 
-
     private val _households = MutableStateFlow<Map<String, Pair<String, String>>>(emptyMap())
     // householdId -> (name, joinCode)
     val households: StateFlow<Map<String, Pair<String, String>>> = _households
+
+    private val _householdMembers = MutableStateFlow<List<String>>(emptyList())
+    val householdMembers: StateFlow<List<String>> = _householdMembers
+
+    private val _activities = MutableStateFlow<List<Map<String, Any>>>(emptyList())
+    val activities: StateFlow<List<Map<String, Any>>> = _activities
+
+    private val _lastSeenActivity = MutableStateFlow<Long?>(null)
+    val lastSeenActivity: StateFlow<Long?> = _lastSeenActivity
+
+    // ✅ Tells if there’s new unseen activity
+    val hasNewActivity: StateFlow<Boolean> = combine(
+        activities,
+        lastSeenActivity,
+        selectedHouseholdId
+    ) { activityList, seenTime, householdId ->
+        if (householdId == null || activityList.isEmpty()) {
+            // 🔹 No household or no activities → no badge
+            false
+        } else {
+            val newest = activityList.maxOfOrNull { it["timestamp"] as? Long ?: 0L } ?: 0L
+            seenTime == null || newest > seenTime
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
 
     init {
         loadUserData()
@@ -75,7 +98,6 @@ class MainViewModel : ViewModel() {
         }
     }
 
-
     fun addPlant(plant: Plant) {
         val doc = db.collection("plants").document()
         db.collection("plants").document(doc.id).set(plant.copy(id = doc.id))
@@ -107,9 +129,21 @@ class MainViewModel : ViewModel() {
             }
     }
 
-    private val _householdMembers = MutableStateFlow<List<String>>(emptyList())
-    val householdMembers: StateFlow<List<String>> = _householdMembers
+    // ✅ Called when user opens the Household Info dialog
+    fun markActivitiesSeen() {
+        _lastSeenActivity.value = System.currentTimeMillis()
+    }
 
+    private fun loadActivities(householdId: String) {
+        db.collection("households").document(householdId)
+            .collection("activities")
+            .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshot, _ ->
+                if (snapshot != null) {
+                    _activities.value = snapshot.documents.map { it.data ?: emptyMap() }
+                }
+            }
+    }
 
     private fun loadHouseholdMembers(householdId: String) {
         val householdRef = db.collection("households").document(householdId)
@@ -132,8 +166,6 @@ class MainViewModel : ViewModel() {
         }
     }
 
-
-
     fun loadPlants(householdId: String?) {
         _selectedHouseholdId.value = householdId
         val userId = auth.currentUser?.uid ?: return
@@ -142,16 +174,19 @@ class MainViewModel : ViewModel() {
             householdId ?: userId
         )
 
+        if (householdId != null) {
+            loadHouseholdMembers(householdId)
+            loadActivities(householdId) // ✅ start listening for activities
+        } else {
+            _householdMembers.value = emptyList()
+            _activities.value = emptyList() // ✅ clear activities when private
+        }
+
         query.addSnapshotListener { snapshot, _ ->
             if (snapshot != null) {
                 val list = snapshot.toObjects(Plant::class.java)
                 _plants.value = list
             }
-        }
-        if (householdId != null) {
-            loadHouseholdMembers(householdId)
-        } else {
-            _householdMembers.value = emptyList()
         }
     }
 
@@ -186,6 +221,20 @@ class MainViewModel : ViewModel() {
         )
 
         db.collection("plants").document(plant.id).set(updatedPlant)
+
+        // ✅ Log the activity in the household if applicable
+        if (plant.householdId != null) {
+            val userId = auth.currentUser?.uid
+            val activity = mapOf(
+                "plantName" to plant.name,
+                "userId" to userId,
+                "timestamp" to now
+            )
+            db.collection("households").document(plant.householdId)
+                .collection("activities")
+                .add(activity)
+        }
+
         return true
     }
 
@@ -212,5 +261,4 @@ class MainViewModel : ViewModel() {
             .addOnSuccessListener { onResult(true) }
             .addOnFailureListener { onResult(false) }
     }
-
 }
