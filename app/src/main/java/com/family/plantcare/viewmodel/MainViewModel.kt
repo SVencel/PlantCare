@@ -225,14 +225,32 @@ class MainViewModel : ViewModel() {
         // ✅ Log the activity in the household if applicable
         if (plant.householdId != null) {
             val userId = auth.currentUser?.uid
+            val username = currentUser.value?.username ?: "Someone"
             val activity = mapOf(
                 "plantName" to plant.name,
                 "userId" to userId,
+                "username" to username,
                 "timestamp" to now
             )
             db.collection("households").document(plant.householdId)
                 .collection("activities")
                 .add(activity)
+
+            val activityRef = db.collection("households").document(plant.householdId)
+                .collection("activities")
+
+            activityRef.add(activity).addOnSuccessListener {
+                // ✅ After adding, keep only the last 10
+                activityRef.orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                    .get()
+                    .addOnSuccessListener { snapshot ->
+                        val extra = snapshot.documents.drop(10)
+                        for (doc in extra) {
+                            activityRef.document(doc.id).delete()
+                        }
+                    }
+            }
+
         }
 
         return true

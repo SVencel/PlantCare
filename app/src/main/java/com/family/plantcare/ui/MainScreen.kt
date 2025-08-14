@@ -351,8 +351,9 @@ fun MainScreen(
                         } else {
                             activities.take(5).forEach { act ->
                                 val plantName = act["plantName"] as? String ?: "Unknown"
-                                val userId = act["userId"] as? String ?: "Someone"
-                                val displayName = members.find { it == userId } ?: userId
+                                val username = act["username"] as? String
+                                val fallbackId = act["userId"] as? String ?: "Someone"
+                                val displayName = username ?: fallbackId
                                 val timestamp = act["timestamp"] as? Long
                                 val dateText = timestamp?.let { formatDate(it) } ?: ""
                                 Text("• $displayName watered $plantName ($dateText)")
