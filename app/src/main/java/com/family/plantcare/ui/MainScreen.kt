@@ -39,6 +39,12 @@ import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.material3.Icon
+import android.util.Base64
+import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.*
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import java.util.*
 
@@ -742,37 +748,53 @@ fun PlantList(
     }
 }
 
+
 @Composable
-fun PlantImage(plant: Plant, modifier: Modifier = Modifier) {
-    plant.imageBase64?.let {
-        val imageBytes = android.util.Base64.decode(it, android.util.Base64.DEFAULT)
-        val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-        if (bitmap != null) {
-            Image(
-                bitmap = bitmap.asImageBitmap(),
-                contentDescription = plant.name,
-                modifier = modifier,
-                contentScale = ContentScale.Crop
-            )
-        } else {
-            Box(
-                modifier = modifier
-                    .fillMaxWidth()
-                    .height(200.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("No image available", style = MaterialTheme.typography.bodyMedium)
+fun PlantImage(
+    plant: Plant,
+    modifier: Modifier = Modifier,
+    mainViewModel: MainViewModel = viewModel()
+) {
+    val cachedImage = remember { mainViewModel.imageCache[plant.id] }
+
+    val imageBitmap = remember(plant.imageBase64) {
+        cachedImage ?: run {
+            val decodedBitmap = plant.imageBase64?.let {
+                try {
+                    val bytes = Base64.decode(it, Base64.DEFAULT)
+                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+                } catch (e: Exception) {
+                    null
+                }
             }
+
+            if (decodedBitmap != null) {
+                mainViewModel.imageCache[plant.id] = decodedBitmap
+            }
+
+            decodedBitmap
         }
-    } ?: Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(200.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text("No image available", style = MaterialTheme.typography.bodyMedium)
+    }
+
+    if (imageBitmap != null) {
+        Image(
+            bitmap = imageBitmap,
+            contentDescription = plant.name,
+            modifier = modifier,
+            contentScale = ContentScale.Crop
+        )
+    } else {
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(200.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("No image available", style = MaterialTheme.typography.bodyMedium)
+        }
     }
 }
+
 
 fun daysUntil(timestamp: Long): Long {
     val diff = timestamp - System.currentTimeMillis()

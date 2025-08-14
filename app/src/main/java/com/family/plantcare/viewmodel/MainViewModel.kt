@@ -3,6 +3,7 @@ package com.family.plantcare.viewmodel
 import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.family.plantcare.model.Plant
@@ -41,6 +42,9 @@ class MainViewModel : ViewModel() {
 
     private val _lastSeenActivity = MutableStateFlow<Long?>(null)
     val lastSeenActivity: StateFlow<Long?> = _lastSeenActivity
+
+    val imageCache = mutableMapOf<String, ImageBitmap>()
+
 
     // ✅ Tells if there’s new unseen activity
     val hasNewActivity: StateFlow<Boolean> = combine(
