@@ -6,6 +6,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import java.util.UUID
 
 class HouseholdViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
@@ -83,6 +84,33 @@ class HouseholdViewModel : ViewModel() {
             }.addOnFailureListener { e ->
                 _error.value = "Failed to join: ${e.message}"
             }
+    }
+
+    fun addRoom(householdId: String, name: String, icon: String, onResult: (Boolean) -> Unit) {
+        if (name.isBlank()) { onResult(false); return }
+        val roomId = UUID.randomUUID().toString().take(8)
+        val roomMap = mapOf("id" to roomId, "name" to name, "icon" to icon)
+        val ref = db.collection("households").document(householdId)
+        ref.get().addOnSuccessListener { doc ->
+            @Suppress("UNCHECKED_CAST")
+            val current = (doc.get("rooms") as? List<*> ?: emptyList<Any>()).toMutableList()
+            current.add(roomMap)
+            ref.update("rooms", current)
+                .addOnSuccessListener { onResult(true) }
+                .addOnFailureListener { onResult(false) }
+        }.addOnFailureListener { onResult(false) }
+    }
+
+    fun removeRoom(householdId: String, roomId: String, onResult: (Boolean) -> Unit) {
+        val ref = db.collection("households").document(householdId)
+        ref.get().addOnSuccessListener { doc ->
+            @Suppress("UNCHECKED_CAST")
+            val current = (doc.get("rooms") as? List<Map<String, Any>> ?: emptyList())
+            val updated = current.filter { (it["id"] as? String) != roomId }
+            ref.update("rooms", updated)
+                .addOnSuccessListener { onResult(true) }
+                .addOnFailureListener { onResult(false) }
+        }.addOnFailureListener { onResult(false) }
     }
 
     fun leaveHousehold(householdId: String, onResult: (Boolean) -> Unit) {

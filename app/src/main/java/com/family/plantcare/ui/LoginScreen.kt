@@ -1,16 +1,26 @@
 package com.family.plantcare.ui
 
+import android.content.Intent
+import android.net.Uri
 import android.util.Patterns
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.family.plantcare.viewmodel.LoginViewModel
+
+// TODO: replace with your actual hosted privacy policy URL
+private const val PRIVACY_POLICY_URL = "https://your-domain.com/privacy"
 
 @Composable
 fun LoginScreen(
@@ -23,6 +33,7 @@ fun LoginScreen(
     var household by remember { mutableStateOf("") }
     var isRegisterMode by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
     val isLoading by loginViewModel.isLoading.collectAsState()
     val error by loginViewModel.error.collectAsState()
     var localError by remember { mutableStateOf<String?>(null) }
@@ -45,7 +56,7 @@ fun LoginScreen(
             isRegisterMode && trimmedUsername.isEmpty() -> localError = "Username is required."
             else -> {
                 if (isRegisterMode) {
-                    loginViewModel.registerUser(trimmedEmail, password, trimmedUsername, household.trim())
+                    loginViewModel.registerUser(trimmedEmail, password, trimmedUsername, household.trim(), onLoginSuccess)
                 } else {
                     loginViewModel.loginUser(trimmedEmail, password, onLoginSuccess)
                 }
@@ -68,9 +79,28 @@ fun LoginScreen(
                     .fillMaxWidth()
                     .padding(32.dp)
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("🌿", fontSize = 30.sp)
+                }
+
+                Spacer(Modifier.height(8.dp))
+
                 Text(
-                    text = if (isRegisterMode) "🌿 Create Your PlantCare Account" else "🌿 Welcome to PlantCare",
-                    style = MaterialTheme.typography.headlineSmall
+                    "PlantCare",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    if (isRegisterMode) "Create your account" else "Welcome back",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -133,16 +163,14 @@ fun LoginScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    TextButton(onClick = { isRegisterMode = !isRegisterMode; localError = null }) {
+                        Text(if (isRegisterMode) "Already have an account? Login here" else "Don't have an account? Register here")
+                    }
+
                     TextButton(onClick = {
-                        isRegisterMode = !isRegisterMode
-                        localError = null
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PRIVACY_POLICY_URL)))
                     }) {
-                        Text(
-                            if (isRegisterMode)
-                                "Already have an account? Login here"
-                            else
-                                "Don't have an account? Register here"
-                        )
+                        Text("Privacy Policy", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }

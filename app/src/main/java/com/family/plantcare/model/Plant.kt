@@ -9,10 +9,12 @@ data class Plant(
     val imageUrl: String? = null,
     val ownerId: String? = null,
     val householdId: String? = null,
+    val roomId: String? = null,
     val wateringDays: Int = 7,
     val nextWateringDate: Long = 0L,
     val lastWatered: Long? = null,
     val timesWatered: Int = 0,
+    val wateringHistory: List<Long> = emptyList(),
     val imageBase64: String? = null,
     val oxygenOutput: Double? = null,
     val createdAt: Long = System.currentTimeMillis()

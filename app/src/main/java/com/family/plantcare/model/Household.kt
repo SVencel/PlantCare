@@ -4,5 +4,6 @@ data class Household(
     val id: String = "",
     val name: String = "",
     val joinCode: String = "",
-    val members: List<String> = emptyList()
+    val members: List<String> = emptyList(),
+    val rooms: List<Room> = emptyList()
 )

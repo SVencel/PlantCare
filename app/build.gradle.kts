@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -18,6 +20,12 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val localProperties = Properties()
+        localProperties.load(rootProject.file("local.properties").inputStream())
+        buildConfigField("String", "PLANTNET_API_KEY", "\"${localProperties.getProperty("plantnet.api.key", "")}\"")
+        buildConfigField("String", "ANTHROPIC_API_KEY", "\"${localProperties.getProperty("anthropic.api.key", "")}\"")
+        buildConfigField("String", "PLANT_ID_API_KEY", "\"${localProperties.getProperty("plantid.api.key", "")}\"")
     }
 
     buildTypes {
@@ -38,6 +46,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
